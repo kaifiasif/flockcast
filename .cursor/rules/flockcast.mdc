@@ -1,0 +1,16 @@
+---
+description: Flockcast project rules (always on)
+alwaysApply: true
+---
+
+Follow AGENTS.md at the repository root; it is the source of truth for structure, commands and rules.
+
+Non-negotiables:
+- Project and API-key SQL only in src/db/repositories, through app.forUser(userId). Someone else's id answers 404.
+- Rehearsals only through app.rehearsals with the project id as scope.
+- Errors are AppError / RehearsalError with a stable code; responses are { error: { code, message } }.
+- Validate every route input with zod and cap lengths.
+- Model keys stay server side: never returned, logged or bundled.
+- Free model tier by default; no feature may need a paid service.
+- Never copy MiroFish (AGPL) code.
+- Run `npm run check` before finishing.

@@ -28,7 +28,7 @@ const EnvSchema = z
     REHEARSAL_LLM_API_KEY: z.string().min(1).optional(),
     REHEARSAL_LLM_BASE_URL: z.url().optional(),
     REHEARSAL_LLM_MODEL: z.string().min(1).max(200).optional(),
-    /** Creator OS's shared setting, read when REHEARSAL_LLM_API_KEY is not set, so one key covers both. */
+    /** Generic shared settings, read when the REHEARSAL_ ones are unset, so a key another app on the same host uses works as is. */
     LLM_API_KEY: z.string().min(1).optional(),
     LLM_BASE_URL: z.url().optional(),
 

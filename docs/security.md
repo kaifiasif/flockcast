@@ -2,7 +2,7 @@
 
 Flockcast has accounts and projects. Each person signs up with an email and password and sees only their own projects, rehearsals and API keys. Other apps reach one project through an API key. Everything lives in one SQLite file. This page lists each common web-app risk, what Flockcast does about it, and where the code is. Items that do not apply say why.
 
-It follows the same baseline as Creator OS: the accounts, sessions, rate limits, headers and logging code are the same modules.
+It shares its security baseline with Creator OS, but runs on its own and depends on no other app.
 
 | Risk | Status | How |
 |---|---|---|
@@ -17,7 +17,7 @@ It follows the same baseline as Creator OS: the accounts, sessions, rate limits,
 | Model keys kept server side | Protected | The model key is read from the environment by the server only. `/api/config` names the provider and model, never the key (`test/api.test.ts` checks this). The web bundle contains no keys. A model base URL must be https, or http on localhost, and may not carry a username or password. |
 | Password hashing | Protected | scrypt (N=2^15, r=8, p=3) with a random salt per password, compared in constant time (`src/modules/auth/passwords.ts`). Passwords are 10 to 200 characters. An unknown email still runs a full hash check and gets the same message as a wrong password. |
 | Multi-factor authentication | Optional, per account | Account, 2-step codes: standard TOTP (RFC 6238) that works with any authenticator app. Turning it on needs a code; turning it off needs the password and a code. Each code works once. |
-| Permissions enforced server side | Protected | Ownership, key scope, spend caps and the Creator OS "after the decision" gate are all enforced on the server, not the UI. |
+| Permissions enforced server side | Protected | Ownership, key scope, spend caps and any gate a source adapter sets (such as the after-the-decision gate in the Creator OS example) are all enforced on the server, not the UI. |
 | Prompt injection | Limited | Drafts and questions reach the model as data inside a fixed prompt, and interview prompts tell the follower to stay in character and ignore instructions in the question. The launch advisor wraps every web page it found in `<finding>` tags that the prompt marks as data, keeps a quote only when it appears word for word in the page it cites, and drops citations to pages that were not found; prices are computed from the buyers' answers, not taken from the model. Model output is only ever shown as text, and its JSON is shape-checked before use. Links shown in reports are the search results' own http(s) URLs, opened with `rel="noopener noreferrer nofollow"`. A model can still be talked into odd replies; nothing it says can act on the server. |
 | Row-level security (RLS) | Equivalent in the data layer | SQLite has no RLS. Its job is done by the owner-bound repositories (the only code that runs SQL for projects and keys) and the engine's scope on every rehearsal query. If Flockcast moves to Postgres, enable RLS on the same `user_id` and `scope` columns. |
 | Webhook signature verification | Not applicable | Flockcast receives no webhooks. |

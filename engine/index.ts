@@ -4,7 +4,7 @@
  *   const rehearsals = createRehearsals({
  *     store: sqliteStore(db),                       // or memoryStore(), or your own Store
  *     engine: swarmEngine({ llm: llmFromEnv() }),   // offline estimate when no key is set
- *     sources: [textSource()],                      // plus your app's adapter, e.g. creatorOsSource(db)
+ *     sources: [textSource()],                      // plus your app's own adapter (see examples/custom-source)
  *   });
  *   const r = await rehearsals.start(projectId, { ref: { text: 'My post' }, settings: { platform: 'linkedin' } });
  */
@@ -22,7 +22,6 @@ export type { SqlDb } from './stores/sqlite.ts';
 export { memoryStore } from './stores/memory.ts';
 export { textSource } from './sources/text.ts';
 export type { TextRef } from './sources/text.ts';
-export { creatorOsSource } from './sources/creator-os.ts';
 export { summarize, stanceOf, sentencesOf } from './summarize.ts';
 export * from './types.ts';
 export { createAdvisor, DEFAULT_ADVISOR_LIMITS } from './advisor/service.ts';

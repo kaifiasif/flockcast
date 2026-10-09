@@ -149,7 +149,7 @@ export interface LlmEnv {
   REHEARSAL_LLM_API_KEY?: string;
   REHEARSAL_LLM_BASE_URL?: string;
   REHEARSAL_LLM_MODEL?: string;
-  /** Shared with Creator OS, so one free key covers both. */
+  /** A generic key name many apps already set; read when the REHEARSAL_ ones are unset, so one free key can serve both. */
   LLM_API_KEY?: string;
   LLM_BASE_URL?: string;
 }
@@ -164,7 +164,7 @@ export function llmFromEnv(env: LlmEnv = process.env as LlmEnv, extra: Partial<O
   const preset = provider === 'custom' ? null : PROVIDERS[provider];
   const apiKey = env.REHEARSAL_LLM_API_KEY || env.LLM_API_KEY || (provider === 'ollama' ? 'ollama' : '');
   if (!apiKey) return null;
-  // LLM_BASE_URL (Creator OS's setting) applies only when no provider is named here
+  // the shared LLM_BASE_URL applies only when no provider is named here
   const baseUrl = env.REHEARSAL_LLM_BASE_URL || (env.REHEARSAL_LLM_PROVIDER ? preset?.baseUrl : env.LLM_BASE_URL || preset?.baseUrl);
   if (!baseUrl) throw new LlmError('REHEARSAL_LLM_BASE_URL is required with the custom provider.');
   const model = env.REHEARSAL_LLM_MODEL || preset?.model;

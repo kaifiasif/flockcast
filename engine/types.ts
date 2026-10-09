@@ -116,7 +116,7 @@ export interface Engine {
 }
 
 /**
- * Where the text comes from. `text` takes it from the request; an app adapter (see sources/creator-os)
+ * Where the text comes from. `text` takes it from the request; an app adapter (see examples/custom-source)
  * reads its own tables and can keep a rehearsal closed until the app says so (the gate).
  */
 export interface Source {

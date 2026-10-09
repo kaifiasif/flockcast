@@ -4,7 +4,6 @@ import { test } from 'node:test';
 import {
   checkBaseUrl,
   createRehearsals,
-  creatorOsSource,
   llmFromEnv,
   memoryStore,
   mirofishClient,
@@ -22,6 +21,7 @@ import { createWorld, feedFor, seedDraft, apply } from '../engine/swarm/simulate
 import { platformOf } from '../engine/platforms.ts';
 import { openDatabase } from '../src/db/client.ts';
 import { migrate } from '../src/db/migrate.ts';
+import { creatorOsSource } from '../examples/creator-os/source.ts';
 import { startFakeMiroFish } from './fake-mirofish.ts';
 
 const POST = 'Fluent sentences are the dangerous ones. Reviewers skim them and forty percent of errors hide there.';
@@ -242,7 +242,7 @@ test('sqlite store: rows round-trip, scope bounds every query, restarts fail sta
   assert.equal(r.list(pa).length, 0);
 });
 
-test('model settings: free presets, Creator OS key sharing, and URL rules', () => {
+test('model settings: free presets, the shared LLM_API_KEY, and URL rules', () => {
   assert.equal(llmFromEnv({}), null, 'no key: offline');
   const groq = llmFromEnv({ LLM_API_KEY: 'k' })!;
   assert.equal(groq.provider, 'groq');
@@ -255,7 +255,7 @@ test('model settings: free presets, Creator OS key sharing, and URL rules', () =
   assert.throws(() => llmFromEnv({ REHEARSAL_LLM_PROVIDER: 'custom', REHEARSAL_LLM_API_KEY: 'k' }), /BASE_URL/);
 });
 
-test('Creator OS adapter: owner only, closed until decided, reads the final text and archive', async () => {
+test('example adapter (Creator OS): owner only, closed until decided, reads the final text and archive', async () => {
   const db = openDatabase(':memory:');
   db.exec(`
     CREATE TABLE runs (id TEXT PRIMARY KEY, user_id TEXT, format TEXT);

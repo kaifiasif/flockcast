@@ -8,7 +8,7 @@ src/  Hono server ──────────── /api/v1  ◀── other 
    │  accounts, projects, keys, rate limits, headers
    ▼
 engine/  createRehearsals({ store, engine, sources })
-   ├─ sources   textSource · creatorOsSource · yours
+   ├─ sources   textSource · yours (examples/custom-source, examples/creator-os)
    ├─ stores    sqliteStore · memoryStore · yours
    └─ engines   swarmEngine(llm) · mirofishEngine(client) ──▶ MiroFish (AGPL, separate process)
                    │
@@ -42,4 +42,4 @@ One SQLite file. Tables: `users`, `sessions`, `projects`, `api_keys`, `rehearsal
 
 ## Tests
 
-`test/engine.test.ts` covers the engine against a stand-in model (`test/fake-model.ts`, which also powers `npm run demo`), including retries, interviews, isolation, caps, both stores and the Creator OS source. `test/api.test.ts` drives the server: accounts, 2-step codes, projects, keys, cross-account access on every endpoint, CSRF, rate limits and headers.
+`test/engine.test.ts` covers the engine against a stand-in model (`test/fake-model.ts`, which also powers `npm run demo`), including retries, interviews, isolation, caps, both stores and the example Creator OS source. `test/api.test.ts` drives the server: accounts, 2-step codes, projects, keys, cross-account access on every endpoint, CSRF, rate limits and headers.

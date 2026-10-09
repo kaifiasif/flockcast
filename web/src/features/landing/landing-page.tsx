@@ -161,7 +161,7 @@ export function LandingPage() {
         </div>
       </Section>
 
-      <Section id="api" title="Plug it into your own app" intro="Every project gets API keys. Creator OS uses one to rehearse a draft after you decide on it; your scripts and CI can do the same." band>
+      <Section id="api" title="Plug it into your own app" intro="Every project gets API keys, so any app can rehearse a draft or ask for launch advice: your writing tool, your CMS, a script or a CI job." band>
         <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
           <pre className="overflow-x-auto rounded-3xl bg-foreground p-6 font-mono text-[13px] leading-relaxed text-[#E7E6E5]">
             <code>{`curl https://your-flockcast.example/api/v1/rehearsals \\

@@ -68,7 +68,7 @@ All optional; see `.env.example`.
 | `REHEARSAL_LLM_PROVIDER` | `groq` | `groq`, `gemini`, `openrouter`, `ollama`, `openai`, `custom` |
 | `REHEARSAL_LLM_API_KEY` | | Free keys at console.groq.com, aistudio.google.com, openrouter.ai |
 | `REHEARSAL_LLM_MODEL` / `_BASE_URL` | per provider | Override the model, or point `custom` at any OpenAI-compatible URL |
-| `LLM_API_KEY` / `LLM_BASE_URL` | | Read when the `REHEARSAL_` ones are unset, so Creator OS's key works as is |
+| `LLM_API_KEY` / `LLM_BASE_URL` | | Generic shared names, read when the `REHEARSAL_` ones are unset, so a key another app on the host already sets works as is |
 | `REHEARSAL_ENGINE` / `MIROFISH_URL` | `swarm` | `mirofish` uses a MiroFish server you run (see `sidecar/mirofish`) |
 | `REHEARSALS_PER_SUBJECT_PER_DAY` | `10` | Spend cap per draft |
 | `INTERVIEWS_PER_REHEARSAL` | `25` | Spend cap per rehearsal |
@@ -84,12 +84,14 @@ Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or gene
 - Light theme only, following the Charm design language.
 - `package.json` is `"private": true`. Remove that when you publish the engine to npm.
 
-## Using it from Creator OS or another app
+## Plug it into any app
 
-See [docs/integration.md](docs/integration.md). In short:
+Flockcast is standalone: it does not depend on any other app, and any app can use it. See [docs/integration.md](docs/integration.md). In short:
 
-- **Over HTTP**: make a project and a key in the app, then `POST /api/v1/rehearsals` with `Authorization: Bearer flk_...`. `examples/creator-os/http-client.ts` is a ready client.
-- **As a library**: `createRehearsals({ store, engine, sources })` with your own adapters. `examples/creator-os/embed.ts` wires it into Creator OS's database, using a `flockcast_rehearsals` table (Creator OS already has a `rehearsals` table) and keeping rehearsal closed until the creator has decided on the draft.
+- **Over HTTP, from any language**: make a project and a key in the app, then call `/api/v1` with `Authorization: Bearer flk_...`. Ready clients: `examples/http-client/flockcast-client.ts` (TypeScript) and `examples/http-client/flockcast_client.py` (Python, standard library only). Both cover rehearsals, follower questions and launch advice.
+- **As a library, in a Node app**: `createRehearsals({ store, engine, sources })` and `createAdvisor({ store, llm, search })` with your own adapters. `examples/custom-source/posts-table.ts` is a template for reading drafts from your own database.
+
+`examples/creator-os/` is one worked example of both modes, for Creator OS. Nothing outside that folder knows about it.
 
 ## Deploy
 
@@ -105,7 +107,7 @@ Pip is Flockcast's plush coral bird, drawn as die-cut stickers in nine moods: pl
 ## More
 
 - [docs/architecture.md](docs/architecture.md): how the pieces fit
-- [docs/integration.md](docs/integration.md): HTTP API, adapters, Creator OS
+- [docs/integration.md](docs/integration.md): HTTP API, clients, adapters, worked examples
 - [docs/security.md](docs/security.md): each common web risk and how it is handled
 - [sidecar/mirofish/README.md](sidecar/mirofish/README.md): running MiroFish beside Flockcast
 

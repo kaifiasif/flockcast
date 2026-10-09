@@ -4,13 +4,11 @@
  * decision the study measures. The scope is the Creator OS user id: a run owned by anyone else reads
  * as not found.
  *
- * This is the only file that knows Creator OS's schema. Another app writes its own ~40-line adapter
- * with the same shape (see docs/integration.md).
+ * Flockcast itself knows nothing about Creator OS: this file lives with the examples, and is the only
+ * place that knows its schema. Any other app writes its own adapter with the same shape (see
+ * examples/custom-source and docs/integration.md).
  */
-import { RehearsalError } from '../core.ts';
-import type { SqlDb } from '../stores/sqlite.ts';
-import { sentencesOf } from '../summarize.ts';
-import type { Source } from '../types.ts';
+import { RehearsalError, sentencesOf, type Source, type SqlDb } from '../../engine/index.ts';
 
 const EXAMPLES = 25;
 

@@ -99,7 +99,7 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   const p = await h.project(me);
   const r = await me.api('POST', `/api/projects/${p.id}/rehearsals`, { text: POST });
   await h.settle();
-  const k = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'Creator OS' });
+  const k = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'My app' });
   const rid = r.body.rehearsal.id;
   const adv = await me.api('POST', `/api/projects/${p.id}/advice`, ADVICE);
   assert.equal(adv.status, 202, JSON.stringify(adv.body));
@@ -137,7 +137,7 @@ test('API keys: shown once, hashed, one project only, revocable', async () => {
   const me = await h.owner();
   const p = await h.project(me);
   const other = await h.project(me, { name: 'Other' });
-  const made = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'Creator OS' });
+  const made = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'My app' });
   assert.equal(made.status, 201);
   const secret: string = made.body.secret;
   assert.match(secret, /^flk_[\w-]{43}$/);

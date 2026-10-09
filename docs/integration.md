@@ -10,7 +10,7 @@ There are two ways in. Pick by where your text lives.
 | Results live in | Flockcast's database | Your database, through a store adapter |
 | Good for | Scripts, CI, apps in any language, a quick start | Apps that want rehearsal inside their own UI and data model |
 
-Creator OS can use either; both are shown below.
+Flockcast does not depend on any app. Any app can use either way in; `examples/creator-os/` shows both for one real app.
 
 ## 1. HTTP API
 
@@ -49,7 +49,7 @@ Behaviour worth knowing:
 - **Errors** are always `{ "error": { "code", "message" } }`: 400 `VALIDATION_FAILED`, 401 bad key, 404 not found or not yours, 409 not ready or no interviews offline, 429 rate or spend cap (with `Retry-After`), 502 the model failed.
 - **Keys** work for one project. Keep them on your server; never ship one to a browser.
 
-`examples/creator-os/http-client.ts` is a typed client with `rehearse`, `wait` and `ask`.
+Ready clients, copy one into your app: `examples/http-client/flockcast-client.ts` (TypeScript, fetch only) and `examples/http-client/flockcast_client.py` (Python, standard library only), each with `rehearse`, `wait`, `ask`, `advise` and `wait_advice`/`waitAdvice`. Any other language needs only an HTTP client: the API is plain JSON with a Bearer header.
 
 ### Launch advice
 
@@ -83,7 +83,7 @@ Everything that varies between apps is an adapter:
 
 | Adapter | Built in | Write your own when |
 |---|---|---|
-| **Source**: where the text comes from | `textSource()` (text in the request), `creatorOsSource(db)` | Your drafts live in your database and you want ownership checks or a gate |
+| **Source**: where the text comes from | `textSource()` (text in the request); your own, e.g. `examples/custom-source/posts-table.ts` | Your drafts live in your database and you want ownership checks or a gate |
 | **Store**: where rehearsals are kept | `sqliteStore(db, { table })`, `memoryStore()` | You use Postgres, Redis or an ORM |
 | **Engine**: who plays the audience | `swarmEngine({ llm })`, `mirofishEngine({ client })` | You have your own simulator |
 | **Model**: which LLM | `llmFromEnv(env)`, `openAiCompatible({ apiKey, baseUrl, model })` | Your provider is not OpenAI-compatible |
@@ -143,12 +143,12 @@ Implement `Store` from `engine/types.ts`: `insert`, `update(scope, id, patch)`, 
 
 Call `rehearsals.recover()` once at boot: rehearsals left running by a crash are marked failed with a message, instead of spinning forever.
 
-## Creator OS
+## Worked example: Creator OS
 
-Creator OS already has a table called `rehearsals` from its first MiroFish integration, so the engine uses `flockcast_rehearsals` there.
+`examples/creator-os/` plugs Flockcast into Creator OS. It is an example, not a dependency: Flockcast's engine and server never import it.
 
-**As a library** (`examples/creator-os/embed.ts`): `creatorOsSource(db)` reads a run's final text, its sentence ids and the creator's archive from Creator OS's own tables, scoped to the Creator OS user id. It keeps rehearsal closed until the creator has decided on the draft (accept or edit; a rejected draft stays closed), so simulated reactions never sway the decision the study measures. `creatorOsSource(db, { beforeDecision: true })` lifts that for demos.
+**As a library** (`embed.ts` with `source.ts`): `creatorOsSource(db)` reads a run's final text, its sentence ids and the creator's archive from Creator OS's own tables, scoped to the Creator OS user id. It keeps rehearsal closed until the creator has decided on the draft (accept or edit; a rejected draft stays closed), so simulated reactions never sway the decision Creator OS's study measures. `creatorOsSource(db, { beforeDecision: true })` lifts that for demos. Creator OS already has a table called `rehearsals`, so the engine uses `flockcast_rehearsals` there.
 
-**Over HTTP** (`examples/creator-os/http-client.ts`): one Flockcast project stands for the creator's X account; Creator OS stores `FLOCKCAST_URL` and `FLOCKCAST_KEY` server side, calls `rehearse(finalText, { subject: 'run:<id>' })` after a decision, and shows the result. Creator OS enforces the after-decision rule itself in this mode.
+**Over HTTP** (`http.ts`): Creator OS uses the generic client like any other app, with `FLOCKCAST_URL` and `FLOCKCAST_KEY` kept server side, and only calls it after a decision.
 
-Either way the model key can be the same free Groq key Creator OS already uses (`LLM_API_KEY`).
+The model key can be a shared `LLM_API_KEY`, so one free Groq key covers both apps.

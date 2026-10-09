@@ -37,7 +37,7 @@ function requireApiKey(app: AppServices): MiddlewareHandler<KeyEnv> {
 }
 
 /**
- * The API other apps call (Creator OS, scripts, CI). Same engine, same limits; the key picks the project.
+ * The API other apps call (any app, script or CI job, in any language). Same engine, same limits; the key picks the project.
  * Mounted at /api/v1.
  */
 export function apiV1Routes(app: AppServices) {

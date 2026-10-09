@@ -6,6 +6,7 @@ alwaysApply: false
 
 - engine/ has no HTTP, accounts or app imports; it must stay embeddable in other apps.
 - Every Store method except insert and failStale takes the scope and filters by it.
-- New adapters (source, store, engine, model) implement the interfaces in engine/types.ts and get a test in test/engine.test.ts against test/fake-model.ts.
+- Agent logic (prompts, model calls, simulation, research, pricing) is Python in agents/flockcast_agents, never TypeScript; engine/agents.ts is the only bridge.
+- New adapters (source, store, engine) implement the interfaces in engine/types.ts and get a test in test/engine.test.ts against test/fake-model.ts.
 - Model output is untrusted: shape-check JSON before use; never execute or render it as HTML.
 - Keep the offline estimate working and labelled when there is no model key.

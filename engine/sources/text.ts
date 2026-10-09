@@ -5,7 +5,7 @@
  */
 import { createHash } from 'node:crypto';
 import { RehearsalError } from '../core.ts';
-import { sentencesOf } from '../summarize.ts';
+import { sentencesOf } from '../text.ts';
 import type { Source } from '../types.ts';
 
 export interface TextRef {

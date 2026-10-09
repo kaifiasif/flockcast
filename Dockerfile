@@ -1,11 +1,15 @@
-# Flockcast: one Node process serving the API and the built web app. No other runtime needed.
+# Flockcast: one Node process serving the API and the built web app, plus Python for the agents
+# (stdlib only, so no pip install).
 FROM node:22-bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends python3 && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY package.json package-lock.json ./
 RUN npm ci --omit=dev && npm cache clean --force
 
 COPY engine ./engine
+COPY agents/flockcast_agents ./agents/flockcast_agents
 COPY src ./src
 COPY public ./public
 COPY docker-entrypoint.sh /usr/local/bin/

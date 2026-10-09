@@ -8,3 +8,5 @@ docs
 web
 scripts
 *.zip
+agents/tests
+**/__pycache__

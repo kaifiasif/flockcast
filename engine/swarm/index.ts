@@ -1,31 +1,26 @@
 /**
- * The built-in audience simulator ("swarm"): personas, feed rounds, report, all in-process. It does the
- * job MiroFish does for this use case with no MiroFish, no Zep and no Python. Written from MiroFish's
- * documented workflow, not its code.
+ * The built-in audience simulator ("swarm"): personas, feed rounds and the report. The crowd itself is
+ * Python (agents/flockcast_agents/swarm); this adapter hands it the post and settings and keeps what
+ * interviews need. Written from MiroFish's documented workflow, not its code.
  */
-import { counting, type Llm } from '../llm.ts';
+import { AgentError, pythonAgents, type Agents } from '../agents.ts';
 import { platformOf } from '../platforms.ts';
-import { summarize } from '../summarize.ts';
-import type { Engine, Persona, RehearsalResult } from '../types.ts';
-import { generatePersonas } from './personas.ts';
-import { interviewPersona, writeReport } from './report.ts';
-import { createWorld, rngFrom, simulate } from './simulate.ts';
+import type { Engine, RehearsalResult } from '../types.ts';
 
-export { DEFAULT_AUDIENCE } from './personas.ts';
-
-/** What interviews need later, kept with the rehearsal. */
-interface SwarmState {
-  draft: string;
-  handle: string;
-  platform: string;
-  personas: Persona[];
-  memory: Record<number, string[]>;
-}
+/** The default follower mix. Kept in step with DEFAULT_AUDIENCE in agents/flockcast_agents/swarm/personas.py. */
+export const DEFAULT_AUDIENCE = [
+  'Peers: people in the same field who reply with their own experience.',
+  'Skeptics: followers who push back on claims that sound too neat or lack a source.',
+  'Lurkers: people who like and repost but rarely reply.',
+  'Newcomers: people seeing the author for the first time through a repost.',
+].join('\n');
 
 /** Joins thread parts as "1/3 ...", so the simulation sees one post, as followers would see the opener. */
 export const draftOf = (posts: string[]) => posts.map((p, i) => (posts.length > 1 ? `${i + 1}/${posts.length} ${p}` : p)).join('\n\n');
 
-export function swarmEngine({ llm = null }: { llm?: Llm | null } = {}): Engine {
+/** Runs offline (a labelled estimate, no interviews) when the agents have no model. */
+export function swarmEngine({ agents = pythonAgents() }: { agents?: Agents } = {}): Engine {
+  const { llm } = agents;
   return {
     kind: llm ? 'swarm' : 'swarm-offline',
     canInterview: Boolean(llm),
@@ -33,49 +28,22 @@ export function swarmEngine({ llm = null }: { llm?: Llm | null } = {}): Engine {
 
     async run({ input, settings, onStage }) {
       if (!input.posts.length || input.posts.some((p) => !p.trim())) throw new Error('Nothing to rehearse: the post is empty.');
-      const draft = draftOf(input.posts);
-      const platform = platformOf(settings.platform);
-      const rng = rngFrom(`${draft}|${settings.audience ?? ''}|${platform.id}|${settings.personas}`);
-      const model = llm ? counting(llm) : null;
-
-      onStage('preparing', 5);
-      const personas = await generatePersonas({ llm: model, audience: settings.audience, examples: input.examples ?? [], handle: settings.handle, platform, count: settings.personas, rng });
-
-      onStage('running', 20);
-      const world = createWorld({ handle: settings.handle, draft, personas, platform });
-      const rounds = await simulate({ llm: model, world, rounds: settings.rounds, rng, onRound: (r, n) => onStage('running', 20 + Math.round((65 * r) / n)) });
-
-      onStage('reporting', 88);
-      const summary = summarize({ draft, sentences: input.sentences, posts: world.posts, actions: world.actions, rounds });
-      let report: RehearsalResult['report'] = null;
-      let reportError: string | undefined;
-      // the report is useful but not essential: keep the simulation if it fails
-      try {
-        report = { markdown: await writeReport({ llm: model, handle: settings.handle, draft, summary, world, personas: personas.length }) };
-      } catch (e) {
-        reportError = (e as Error).message;
-      }
-      const result: RehearsalResult = {
-        ...summary,
-        agents: personas.length,
-        engine: llm ? 'swarm' : 'swarm-offline',
-        model: llm?.model ?? null,
-        model_calls: model?.calls ?? 0,
-        platform: platform.id,
-        personas: personas.map(({ id, name, segment, stance, bio }) => ({ id, name, segment, stance, bio })),
-        report,
-        ...(reportError ? { report_error: reportError } : {}),
-      };
-      const state: SwarmState = { draft, handle: settings.handle, platform: platform.id, personas, memory: Object.fromEntries(world.memory) };
-      return { result, state };
+      return agents.run<{ result: RehearsalResult; state: unknown }>('rehearse', { input, settings, platform: platformOf(settings.platform) }, (status, progress) =>
+        onStage(status as Parameters<typeof onStage>[0], progress),
+      );
     },
 
     async interview({ state, agentId, question }) {
       if (!llm) throw Object.assign(new Error('Interviews need a model key.'), { status: 409 });
-      const s = state as SwarmState;
-      const persona = s?.personas?.find((p) => p.id === agentId);
-      if (!persona) throw Object.assign(new Error(`There is no simulated person #${agentId}.`), { status: 404 });
-      return interviewPersona({ llm, handle: s.handle, draft: s.draft, persona, history: s.memory[agentId] ?? [], question, platform: platformOf(s.platform) });
+      const platform = platformOf((state as { platform?: string } | null)?.platform);
+      try {
+        const { answer } = await agents.run<{ answer: string }>('interview', { state, agent_id: agentId, question, platform });
+        return answer;
+      } catch (e) {
+        // a missing person or a refused question keeps its status; anything else is the model failing
+        if (e instanceof AgentError && ![400, 404, 409].includes(e.status)) throw new Error(e.message, { cause: e });
+        throw e;
+      }
     },
   };
 }

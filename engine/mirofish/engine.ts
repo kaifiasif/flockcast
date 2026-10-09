@@ -5,8 +5,8 @@
  */
 import { platformOf } from '../platforms.ts';
 import { DEFAULT_AUDIENCE, draftOf } from '../swarm/index.ts';
-import { summarize, type FeedAction, type FeedPost } from '../summarize.ts';
-import type { Engine, RehearsalInput, RehearsalSettings } from '../types.ts';
+import { pythonAgents, type Agents } from '../agents.ts';
+import type { Engine, RehearsalInput, RehearsalResult, RehearsalSettings } from '../types.ts';
 import type { MiroFishClient } from './client.ts';
 
 const EXAMPLES = 25;
@@ -48,7 +48,8 @@ interface MiroFishState {
   simulation_id: string;
 }
 
-export function mirofishEngine({ client }: { client: MiroFishClient }): Engine {
+/** `agents` turns MiroFish's feed into the same summary the built-in crowd produces. */
+export function mirofishEngine({ client, agents = pythonAgents() }: { client: MiroFishClient; agents?: Agents }): Engine {
   return {
     kind: 'mirofish',
     canInterview: true,
@@ -79,7 +80,8 @@ export function mirofishEngine({ client }: { client: MiroFishClient }): Engine {
       } catch (e) {
         reportError = (e as Error).message;
       }
-      const summary = summarize({ draft, sentences: input.sentences, posts: (posts.posts ?? []) as FeedPost[], actions: (actions.actions ?? []) as FeedAction[], rounds: Number(status.current_round) || null });
+      type Summary = Omit<RehearsalResult, 'engine' | 'model' | 'model_calls' | 'platform' | 'personas' | 'report' | 'report_error'>;
+      const { summary } = await agents.run<{ summary: Summary }>('summarize', { draft, sentences: input.sentences, posts: posts.posts ?? [], actions: actions.actions ?? [], rounds: Number(status.current_round) || null });
       const state: MiroFishState = { simulation_id: sim.simulation_id };
       return {
         result: { ...summary, engine: 'mirofish', model: null, model_calls: 0, platform: platformOf('x').id, personas: [], report, ...(reportError ? { report_error: reportError } : {}) },

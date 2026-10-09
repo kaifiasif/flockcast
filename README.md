@@ -32,7 +32,7 @@ A run is four model calls. Quotes that are not word for word in a page found are
 
 ## Run it
 
-Needs Node 22.18 or newer. The server runs its TypeScript directly; only the web app has a build step.
+Needs Node 22.18 or newer and Python 3.10 or newer. The server runs its TypeScript directly; the agents are Python with no packages to install; only the web app has a build step.
 
 ```bash
 npm install
@@ -47,7 +47,8 @@ Other commands:
 
 ```bash
 npm run demo          # the app on :4180 with a built-in stand-in model, so every screen works with no key
-npm test              # 40 tests: engine, advisor, adapters, accounts, API, isolation between accounts, security checks
+npm test              # 38 tests: engine, advisor, adapters, accounts, API, isolation between accounts, security checks
+npm run test:py       # 23 tests for the Python agents
 npm run check         # typecheck server and web, then the tests
 npm run dev           # server with reload; `npm run dev:web` for the web app with hot reload on :5173
 npm run stickers      # regenerate the mascot sticker files
@@ -69,6 +70,7 @@ All optional; see `.env.example`.
 | `REHEARSAL_LLM_API_KEY` | | Free keys at console.groq.com, aistudio.google.com, openrouter.ai |
 | `REHEARSAL_LLM_MODEL` / `_BASE_URL` | per provider | Override the model, or point `custom` at any OpenAI-compatible URL |
 | `LLM_API_KEY` / `LLM_BASE_URL` | | Generic shared names, read when the `REHEARSAL_` ones are unset, so a key another app on the host already sets works as is |
+| `FLOCKCAST_PYTHON` | `python3` | The Python 3.10+ that runs the agents |
 | `REHEARSAL_ENGINE` / `MIROFISH_URL` | `swarm` | `mirofish` uses a MiroFish server you run (see `sidecar/mirofish`) |
 | `REHEARSALS_PER_SUBJECT_PER_DAY` | `10` | Spend cap per draft |
 | `INTERVIEWS_PER_REHEARSAL` | `25` | Spend cap per rehearsal |
@@ -79,7 +81,8 @@ Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or gene
 
 - Sign-up is closed: the first account owns the server. Open it with `REHEARSAL_SIGNUP=open`.
 - Groq is the default model provider because its free tier is enough for daily use; any of the six presets works.
-- The built-in engine (`swarm`) runs inside the server. MiroFish is optional and stays a separate AGPL service; no MiroFish code is in this repository.
+- Every agent is Python (`agents/flockcast_agents`, standard library only); the server starts one short-lived process per job, so nothing extra listens or needs installing beyond `python3`.
+- The built-in engine (`swarm`) runs on the same machine as the server. MiroFish is optional and stays a separate AGPL service; no MiroFish code is in this repository.
 - The platform is chosen per project, so one server can rehearse X threads and LinkedIn posts side by side.
 - Light theme only, following the Charm design language.
 - `package.json` is `"private": true`. Remove that when you publish the engine to npm.

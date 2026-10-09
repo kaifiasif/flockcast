@@ -1,4 +1,4 @@
-import { createAdvisor, createRehearsals, sqliteAdviceStore, sqliteStore, textSource, type Advisor, type Engine, type Llm, type Rehearsals, type SearchAdapter } from '../engine/index.ts';
+import { createAdvisor, createRehearsals, sqliteAdviceStore, sqliteStore, textSource, type Advisor, type Agents, type Engine, type Rehearsals, type SearchSource } from '../engine/index.ts';
 import type { AppConfig } from './config/env.ts';
 import { createJobRunner, type JobRunner } from './core/jobs.ts';
 import { createLogger, errorFields, type Logger } from './core/logger.ts';
@@ -44,10 +44,10 @@ export function createContext(deps: {
   config: AppConfig;
   engine: Engine;
   provider?: string | null;
-  /** The model the launch advisor uses; null runs it as research only. */
-  llm?: Llm | null;
-  /** Where the advisor searches. Tests pass canned sources; nothing searches by default. */
-  search?: SearchAdapter[];
+  /** The Python agents the launch advisor runs on; without a model it runs as research only. */
+  agents: Agents;
+  /** Where the advisor searches. Tests pass the canned "sample" source; nothing searches by default. */
+  searchSources?: SearchSource[];
   log?: Logger;
 }): AppServices {
   const log = deps.log ?? createLogger();
@@ -63,8 +63,8 @@ export function createContext(deps: {
   });
   const advisor = createAdvisor({
     store: sqliteAdviceStore(deps.db),
-    llm: deps.llm ?? null,
-    search: deps.search ?? [],
+    agents: deps.agents,
+    sources: deps.searchSources ?? [],
     background: (job) => jobs.enqueue('advice', job),
     limits: { runsPerScopePerDay: deps.config.limits.advicePerProjectPerDay },
     onError: (e, at) => log.warn('advice_failed', { project_id: at.scope, advice_id: at.id, ...errorFields(e) }),

@@ -5,10 +5,9 @@
  */
 import { randomUUID } from 'node:crypto';
 import { RehearsalError } from '../core.ts';
-import type { Llm } from '../llm.ts';
+import type { Agents } from '../agents.ts';
 import { ADVISOR_AGENTS } from './agents.ts';
-import { runAdvice } from './pipeline.ts';
-import { ACTIVE_ADVICE, BILLING, CURRENCIES, type Advice, type AdviceInput, type AdviceStore, type Billing, type Currency, type SearchAdapter } from './types.ts';
+import { ACTIVE_ADVICE, BILLING, CURRENCIES, type Advice, type AdviceInput, type AdviceStore, type Billing, type AdviceResult, type AdviceStatus, type Currency, type SearchSource } from './types.ts';
 
 export interface AdvisorLimits {
   runsPerScopePerDay: number;
@@ -18,9 +17,10 @@ export const DEFAULT_ADVISOR_LIMITS: AdvisorLimits = { runsPerScopePerDay: 5, ma
 
 export interface CreateAdvisorOptions {
   store: AdviceStore;
-  /** Null runs research only, labelled as such. */
-  llm: Llm | null;
-  search: SearchAdapter[];
+  /** The Python launch crew. Without a model it runs research only, labelled as such. */
+  agents: Agents;
+  /** Where it searches; see searchSourcesFromEnv. */
+  sources: SearchSource[];
   background?: (job: () => Promise<void>) => void;
   limits?: Partial<AdvisorLimits>;
   now?: () => Date;
@@ -82,7 +82,7 @@ export function createAdvisor(opts: CreateAdvisorOptions) {
   async function execute(row: Advice): Promise<void> {
     const set = (patch: Partial<Advice>) => store.update(row.scope, row.id, patch);
     try {
-      const result = await runAdvice(row.input, { llm: opts.llm, search: opts.search, onStep: (status, p) => set({ status, progress: Math.round(p * 100) }) });
+      const { result } = await opts.agents.run<{ result: AdviceResult }>('advise', { input: row.input, sources: opts.sources }, (status, progress) => set({ status: status as AdviceStatus, progress }));
       set({ status: 'done', progress: 100, result, finished_at: now().toISOString() });
     } catch (e) {
       opts.onError?.(e, { scope: row.scope, id: row.id });
@@ -93,8 +93,8 @@ export function createAdvisor(opts: CreateAdvisorOptions) {
   return {
     limits,
     agents: ADVISOR_AGENTS,
-    mode: opts.llm ? ('full' as const) : ('offline' as const),
-    sources: opts.search.map((s) => s.name),
+    mode: opts.agents.llm ? ('full' as const) : ('offline' as const),
+    sources: [...opts.sources],
 
     start(scope: string, req: AdviceRequest): Advice {
       const input = inputOf(req);

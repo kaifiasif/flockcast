@@ -59,16 +59,16 @@ Ready clients, copy one into your app: `examples/http-client/flockcast-client.ts
 | `GET /api/v1/advice` | Recent runs, newest first, without their reports |
 | `GET /api/v1/advice/:id` | One run, with `status` (`queued`, `researching`, `simulating`, `deciding`, `done`, `failed`) and, when done, `result`: `findings`, `market`, `buyers`, `reception`, `pricing` and `plan` |
 
-As a library: `createAdvisor({ store: sqliteAdviceStore(db), llm, search: searchFromEnv() })`, then `advisor.start(scope, { product, pitch })`. The table is `ADVICE_SQL`.
+As a library: `createAdvisor({ store: sqliteAdviceStore(db), agents: pythonAgents({ llm: llmFromEnv() }), sources: searchSourcesFromEnv() })`, then `advisor.start(scope, { product, pitch })`. The table is `ADVICE_SQL`.
 
 ## 2. Library
 
 ```ts
-import { createRehearsals, llmFromEnv, sqliteStore, swarmEngine, textSource } from './flockcast/engine/index.ts'; // copy engine/ into your app, or a git dependency
+import { createRehearsals, llmFromEnv, pythonAgents, sqliteStore, swarmEngine, textSource } from './flockcast/engine/index.ts'; // copy engine/ and agents/ into your app, or a git dependency
 
 const rehearsals = createRehearsals({
   store: sqliteStore(db, { table: 'flockcast_rehearsals' }),
-  engine: swarmEngine({ llm: llmFromEnv(process.env) }), // null key: offline estimate
+  engine: swarmEngine({ agents: pythonAgents({ llm: llmFromEnv(process.env) }) }), // null key: offline estimate
   sources: [textSource()],
 });
 
@@ -85,8 +85,8 @@ Everything that varies between apps is an adapter:
 |---|---|---|
 | **Source**: where the text comes from | `textSource()` (text in the request); your own, e.g. `examples/custom-source/posts-table.ts` | Your drafts live in your database and you want ownership checks or a gate |
 | **Store**: where rehearsals are kept | `sqliteStore(db, { table })`, `memoryStore()` | You use Postgres, Redis or an ORM |
-| **Engine**: who plays the audience | `swarmEngine({ llm })`, `mirofishEngine({ client })` | You have your own simulator |
-| **Model**: which LLM | `llmFromEnv(env)`, `openAiCompatible({ apiKey, baseUrl, model })` | Your provider is not OpenAI-compatible |
+| **Engine**: who plays the audience | `swarmEngine({ agents })`, `mirofishEngine({ client, agents })` | You have your own simulator |
+| **Model**: which LLM | `llmFromEnv(env)`, or `{ provider, model, baseUrl, apiKey }` passed to `pythonAgents({ llm })` | Your provider is not OpenAI-compatible |
 
 ### Settings
 

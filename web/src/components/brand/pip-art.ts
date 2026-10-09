@@ -85,13 +85,13 @@ export const PIP_VARIANTS: Record<PipVariant, Parts & { label: string; blurb: st
     front: `<path d="M42 21 v10 q18 8 36 0 v-10z" fill="${INK}"/><path d="M60 6 L94 17 L60 28 L26 17z" fill="${INK}"/><path d="M60 17 L90 20 L91 34" fill="none" stroke="#F2B15F" stroke-width="2"/><circle cx="91" cy="36" r="3" fill="#F2B15F"/><g fill="none" stroke="#C98B2E" stroke-width="1.8"><circle cx="48" cy="46" r="7.5"/><circle cx="72" cy="46" r="7.5"/><path d="M55.5 46 h9"/></g><path d="M90 96 q10 -26 24 -42 q-6 20 -20 44z" fill="#FBFAF9" stroke="#A8A29E" stroke-width="1.4"/><path d="M92 96 q8 -20 18 -36" stroke="#A8A29E" stroke-width="1" fill="none"/>`,
   },
   murmur: {
-    label: 'Madame Murmur',
+    label: 'Mystic Mira',
     blurb: 'Gathers a crowd of buyers and asks what they would pay.',
     front: `<path d="M30 34 c-2 -26 62 -26 60 0 q-30 -8 -60 0z" fill="#7C5CA6"/><path d="M36 24 q24 -12 48 0" fill="none" stroke="#9B7FC4" stroke-width="3"/><circle cx="60" cy="25" r="4.5" fill="#F2B15F"/><circle cx="60" cy="25" r="2" fill="#E4544B"/><circle cx="60" cy="81" r="14" fill="#D9CCF3" fill-opacity=".92" stroke="#9B7FC4" stroke-width="1.6"/><path d="M52 75 q4 -5 9 -6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="56" cy="85" r="2.2" fill="#E4544B"/><circle cx="63" cy="83" r="2.2" fill="#E4544B"/><circle cx="66" cy="89" r="2.2" fill="#E4544B"/><path d="M47 96 h26 l-4 6 h-18z" fill="#8C6B3E"/>`,
     loose: `<path d="M12 30 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2z M104 20 l1.5 -4 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5z" fill="#9B7FC4"/>`,
   },
   baron: {
-    label: 'Baron Penny',
+    label: 'Lord Ledger',
     blurb: 'Turns the answers into a price people say yes to.',
     front: `<rect x="43" y="-2" width="34" height="29" rx="3" fill="${INK}"/><rect x="43" y="18" width="34" height="5" fill="#E4544B"/><ellipse cx="60" cy="27" rx="27" ry="4.5" fill="${INK}"/><circle cx="72" cy="46" r="8" fill="#fff" fill-opacity=".2" stroke="#F2B15F" stroke-width="2.4"/><path d="M79 50 q6 10 2 22" fill="none" stroke="#F2B15F" stroke-width="1.4"/><circle cx="93" cy="84" r="10" fill="#F2B15F" stroke="#C98B2E" stroke-width="2"/><path d="M96 79 q-3 -2 -6 0 q-2 3 3 5 q4 2 1 5 q-3 2 -6 0 M93 76 v16" fill="none" stroke="#C98B2E" stroke-width="1.6" stroke-linecap="round"/>`,
   },

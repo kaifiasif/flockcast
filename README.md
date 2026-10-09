@@ -20,8 +20,8 @@ Each project also has a **Launch advisor** for the product you are about to laun
 |---|---|
 | Bramble the Scout | Searches Hacker News and Reddit (no key needed) and, with a free `TAVILY_API_KEY`, the open web for people talking about the problem |
 | Professor Quill | Reads what was found, names the competitors and copies the exact words people used, each linked to its page |
-| Madame Murmur | Asks a crowd of simulated buyers how much they like it, what puts them off and what they would pay |
-| Baron Penny | Turns the buyers' four price answers (Van Westendorp) into an acceptable range and the plan prices, by arithmetic rather than by the model |
+| Mystic Mira | Asks a crowd of simulated buyers how much they like it, what puts them off and what they would pay |
+| Lord Ledger | Turns the buyers' four price answers (Van Westendorp) into an acceptable range and the plan prices, by arithmetic rather than by the model |
 | Captain Compass | Makes the call (launch, launch after changes, or rethink) and writes the features to build first, the launch steps and a launch post you can rehearse |
 
 ![The launch crew](docs/screenshots/advisor-crew.png)
@@ -100,7 +100,7 @@ Put it behind HTTPS and set `NODE_ENV=production`, `TRUST_PROXY=1` and `REHEARSA
 
 ## The mascot
 
-Pip is Flockcast's plush coral bird, drawn as die-cut stickers in nine moods: plain, skeptic, fan, newcomer, lurker, amplifier, analyst, sleepy and oops. The app uses them for followers, empty states and errors. The launch advisor's crew are Pips too: Bramble the Scout (pith helmet and binoculars), Professor Quill (mortarboard and quill), Madame Murmur (turban and crystal ball), Baron Penny (top hat, monocle and coin) and Captain Compass (captain's hat and compass). The SVG files are in `public_static/stickers/` (and in `stickers/` as SVG and PNG), free to use with Flockcast.
+Pip is Flockcast's plush coral bird, drawn as die-cut stickers in nine moods: plain, skeptic, fan, newcomer, lurker, amplifier, analyst, sleepy and oops. The app uses them for followers, empty states and errors. The launch advisor's crew are Pips too: Bramble the Scout (pith helmet and binoculars), Professor Quill (mortarboard and quill), Mystic Mira (turban and crystal ball), Lord Ledger (top hat, monocle and coin) and Captain Compass (captain's hat and compass). The SVG files are in `public_static/stickers/` (and in `stickers/` as SVG and PNG), free to use with Flockcast.
 
 ## More
 

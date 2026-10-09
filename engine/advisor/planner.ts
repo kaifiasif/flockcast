@@ -1,5 +1,5 @@
 /**
- * Steps four and five: Baron Penny's prices come from arithmetic on the buyers' answers; Captain
+ * Steps four and five: Lord Ledger's prices come from arithmetic on the buyers' answers; Captain
  * Compass writes the decision around them. The model names the plans and says what goes in each,
  * but never picks a number, so a confident-sounding price can always be traced back to the buyers.
  */

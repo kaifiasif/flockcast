@@ -7,8 +7,8 @@ import type { AdviceStatus } from './types.ts';
 export const ADVISOR_AGENTS = {
   scout: { name: 'Bramble the Scout', job: 'Searches Reddit, Hacker News and the web for people talking about your problem.' },
   professor: { name: 'Professor Quill', job: 'Reads what was found, names your competitors and copies the exact words people used.' },
-  murmur: { name: 'Madame Murmur', job: 'Gathers a crowd of simulated buyers and asks each one what they would pay.' },
-  baron: { name: 'Baron Penny', job: 'Turns the buyers’ answers into a price range and the plans to sell.' },
+  murmur: { name: 'Mystic Mira', job: 'Gathers a crowd of simulated buyers and asks each one what they would pay.' },
+  baron: { name: 'Lord Ledger', job: 'Turns the buyers’ answers into a price range and the plans to sell.' },
   captain: { name: 'Captain Compass', job: 'Makes the call, picks the features to build and writes your launch steps and post.' },
 } as const;
 export type AdvisorAgent = keyof typeof ADVISOR_AGENTS;

@@ -51,6 +51,16 @@ Behaviour worth knowing:
 
 `examples/creator-os/http-client.ts` is a typed client with `rehearse`, `wait` and `ask`.
 
+### Launch advice
+
+| Endpoint | Does |
+|---|---|
+| `POST /api/v1/advice` | Starts a launch advisor run. Body: `product` and `pitch` (at least 20 characters) required; `audience`, `price_idea`, `competitors` (up to 8 names), `billing` (`subscription` or `one_time`), `currency` (`USD`, `EUR`, `GBP`, `INR`), `buyers` (5 to 30). Answers 202 |
+| `GET /api/v1/advice` | Recent runs, newest first, without their reports |
+| `GET /api/v1/advice/:id` | One run, with `status` (`queued`, `researching`, `simulating`, `deciding`, `done`, `failed`) and, when done, `result`: `findings`, `market`, `buyers`, `reception`, `pricing` and `plan` |
+
+As a library: `createAdvisor({ store: sqliteAdviceStore(db), llm, search: searchFromEnv() })`, then `advisor.start(scope, { product, pitch })`. The table is `ADVICE_SQL`.
+
 ## 2. Library
 
 ```ts

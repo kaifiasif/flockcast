@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react';
 
 /** Hash routes keep the server's SPA fallback trivial and every screen deep-linkable. */
-export type ProjectTab = 'rehearsals' | 'setup' | 'keys';
+export type ProjectTab = 'rehearsals' | 'advisor' | 'setup' | 'keys';
 export type Route =
   | { name: 'landing' }
   | { name: 'login' }
@@ -10,6 +10,7 @@ export type Route =
   | { name: 'project'; id: string; tab: ProjectTab }
   | { name: 'compose'; id: string; from?: string }
   | { name: 'rehearsal'; id: string; rid: string }
+  | { name: 'advice'; id: string; aid: string }
   | { name: 'account' };
 
 const ID = '([\\w-]+)';
@@ -20,7 +21,8 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => Route][] = [
   [new RegExp(`^/projects/${ID}/new$`), (m) => ({ name: 'compose', id: m[1] })],
   [new RegExp(`^/projects/${ID}/new/${ID}$`), (m) => ({ name: 'compose', id: m[1], from: m[2] })],
   [new RegExp(`^/projects/${ID}/rehearsals/${ID}$`), (m) => ({ name: 'rehearsal', id: m[1], rid: m[2] })],
-  [new RegExp(`^/projects/${ID}/(setup|keys)$`), (m) => ({ name: 'project', id: m[1], tab: m[2] as ProjectTab })],
+  [new RegExp(`^/projects/${ID}/advice/${ID}$`), (m) => ({ name: 'advice', id: m[1], aid: m[2] })],
+  [new RegExp(`^/projects/${ID}/(advisor|setup|keys)$`), (m) => ({ name: 'project', id: m[1], tab: m[2] as ProjectTab })],
   [new RegExp(`^/projects/${ID}$`), (m) => ({ name: 'project', id: m[1], tab: 'rehearsals' })],
   [/^\/account$/, () => ({ name: 'account' })],
 ];
@@ -44,6 +46,8 @@ export function pathOf(route: Route): string {
       return route.from ? `/projects/${route.id}/new/${route.from}` : `/projects/${route.id}/new`;
     case 'rehearsal':
       return `/projects/${route.id}/rehearsals/${route.rid}`;
+    case 'advice':
+      return `/projects/${route.id}/advice/${route.aid}`;
     default:
       return `/${route.name}`;
   }

@@ -34,6 +34,12 @@ const EnvSchema = z
 
     REHEARSALS_PER_SUBJECT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(10),
     INTERVIEWS_PER_REHEARSAL: z.coerce.number().int().min(0).max(1000).default(25),
+
+    /** Where the launch advisor searches: hackernews, reddit, web (needs TAVILY_API_KEY), sample. Default: hackernews,reddit, plus web with a Tavily key. */
+    ADVISOR_SOURCES: z.string().regex(/^[a-z, ]*$/, 'use comma-separated source names').optional(),
+    /** Optional free Tavily key (tavily.com) adds general web search to the advisor. */
+    TAVILY_API_KEY: z.string().min(1).optional(),
+    ADVICE_PER_PROJECT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(5),
   })
   .refine((e) => e.REHEARSAL_ENGINE !== 'mirofish' || e.MIROFISH_URL, { message: 'MIROFISH_URL is required with REHEARSAL_ENGINE=mirofish', path: ['MIROFISH_URL'] })
   .refine((e) => e.REHEARSAL_LLM_PROVIDER !== 'custom' || (e.REHEARSAL_LLM_BASE_URL && e.REHEARSAL_LLM_MODEL), {
@@ -63,11 +69,11 @@ export interface AppConfig {
   /** Secure cookies only travel over HTTPS; the session cookie also gets the __Host- prefix. */
   secureCookies: boolean;
   trustProxy: boolean;
-  limits: { rehearsalsPerSubjectPerDay: number; interviewsPerRehearsal: number };
+  limits: { rehearsalsPerSubjectPerDay: number; interviewsPerRehearsal: number; advicePerProjectPerDay: number };
   rateLimits: {
     /** every API call */
     api: RateLimit;
-    /** calls that spend model tokens: starting a rehearsal, asking a follower */
+    /** calls that spend model tokens: starting a rehearsal, asking a follower, asking for launch advice */
     costly: RateLimit;
     /** failed log-ins, counted per visitor and per email */
     authFailures: RateLimit;
@@ -89,7 +95,7 @@ export function configFromEnv(env: Env): AppConfig {
     ownerEmail: env.REHEARSAL_OWNER_EMAIL,
     secureCookies: env.COOKIE_SECURE === undefined ? env.NODE_ENV === 'production' : env.COOKIE_SECURE === '1' || env.COOKIE_SECURE === 'true',
     trustProxy: env.TRUST_PROXY,
-    limits: { rehearsalsPerSubjectPerDay: env.REHEARSALS_PER_SUBJECT_PER_DAY, interviewsPerRehearsal: env.INTERVIEWS_PER_REHEARSAL },
+    limits: { rehearsalsPerSubjectPerDay: env.REHEARSALS_PER_SUBJECT_PER_DAY, interviewsPerRehearsal: env.INTERVIEWS_PER_REHEARSAL, advicePerProjectPerDay: env.ADVICE_PER_PROJECT_PER_DAY },
     rateLimits: DEFAULT_RATE_LIMITS,
   };
 }

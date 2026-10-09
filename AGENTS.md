@@ -17,7 +17,7 @@ Flockcast rehearses a social post with a simulated audience before it is publish
 ```bash
 npm install && npm run build:web   # once
 npm run demo                        # app on :4180 with a stand-in model; no key needed
-npm test                            # 30 node:test tests
+npm test                            # 40 node:test tests
 npm run check                       # typecheck server + web, then tests: run before every commit
 ```
 

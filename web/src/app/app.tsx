@@ -18,6 +18,7 @@ const ProjectsPage = lazy(() => import('@/features/projects/projects-page').then
 const ProjectPage = lazy(() => import('@/features/projects/project-page').then((m) => ({ default: m.ProjectPage })));
 const ComposePage = lazy(() => import('@/features/rehearsals/compose-page').then((m) => ({ default: m.ComposePage })));
 const RehearsalPage = lazy(() => import('@/features/rehearsals/rehearsal-page').then((m) => ({ default: m.RehearsalPage })));
+const AdvicePage = lazy(() => import('@/features/advice/advice-page').then((m) => ({ default: m.AdvicePage })));
 const AccountPage = lazy(() => import('@/features/account/account-page').then((m) => ({ default: m.AccountPage })));
 
 function Screen({ route }: { route: Route }) {
@@ -28,6 +29,8 @@ function Screen({ route }: { route: Route }) {
       return <ComposePage id={route.id} from={route.from} key={`${route.id}/${route.from ?? ''}`} />;
     case 'rehearsal':
       return <RehearsalPage id={route.id} rid={route.rid} key={route.rid} />;
+    case 'advice':
+      return <AdvicePage id={route.id} aid={route.aid} key={route.aid} />;
     case 'account':
       return <AccountPage />;
     default:

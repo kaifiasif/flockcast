@@ -1,6 +1,6 @@
 /** Test harness: the real app on an in-memory database, with an engine each test file can choose. */
 import assert from 'node:assert/strict';
-import { swarmEngine, type Engine } from '../engine/index.ts';
+import { swarmEngine, type Engine, type Llm, type SearchAdapter } from '../engine/index.ts';
 import { createApp } from '../src/app.ts';
 import { configFromEnv, DEFAULT_RATE_LIMITS, loadEnv, type AppConfig } from '../src/config/env.ts';
 import { createContext, type AppServices } from '../src/context.ts';
@@ -34,7 +34,7 @@ export interface Harness {
   project(client: Client, extra?: Record<string, unknown>): Promise<Json>;
 }
 
-export function createHarness(opts: { engine?: Engine; env?: Record<string, string>; config?: Partial<AppConfig> } = {}): Harness {
+export function createHarness(opts: { engine?: Engine; llm?: Llm | null; search?: SearchAdapter[]; env?: Record<string, string>; config?: Partial<AppConfig> } = {}): Harness {
   const env = loadEnv({ NODE_ENV: 'test', ...opts.env });
   const db = openDatabase(':memory:');
   migrate(db);
@@ -42,6 +42,8 @@ export function createHarness(opts: { engine?: Engine; env?: Record<string, stri
   const ctx = createContext({
     db,
     engine: opts.engine ?? swarmEngine(),
+    llm: opts.llm ?? null,
+    search: opts.search ?? [],
     log: quiet,
     config: {
       ...configFromEnv(env),

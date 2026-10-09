@@ -2,9 +2,12 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { currentStep, totpCode } from '../src/modules/auth/totp.ts';
+import { openAiCompatible, sampleSearch } from '../engine/index.ts';
+import { fakeModelFetch } from './fake-model.ts';
 import { createHarness, TEST_PASSWORD } from './helpers.ts';
 
 const POST = 'Fluent sentences are the dangerous ones. Reviewers skim them and forty percent of errors hide there.';
+const ADVICE = { product: 'Flockcast', pitch: 'Rehearse a social post with a simulated audience before you publish it.', competitors: ['Taplio'] };
 
 test('closed sign-up: the first account gets in, later strangers do not', async () => {
   const h = createHarness();
@@ -98,6 +101,10 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   await h.settle();
   const k = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'Creator OS' });
   const rid = r.body.rehearsal.id;
+  const adv = await me.api('POST', `/api/projects/${p.id}/advice`, ADVICE);
+  assert.equal(adv.status, 202, JSON.stringify(adv.body));
+  await h.settle();
+  const aid = adv.body.advice.id;
   for (const [method, path, body] of [
     ['GET', `/api/projects/${p.id}`],
     ['PUT', `/api/projects/${p.id}`, { name: 'x', handle: 'x' }],
@@ -110,6 +117,10 @@ test('object-level access: another user sees 404 for every project, rehearsal an
     ['GET', `/api/projects/${p.id}/keys`],
     ['POST', `/api/projects/${p.id}/keys`, { name: 'x' }],
     ['DELETE', `/api/projects/${p.id}/keys/${k.body.key.id}`],
+    ['GET', `/api/projects/${p.id}/advice`],
+    ['POST', `/api/projects/${p.id}/advice`, ADVICE],
+    ['GET', `/api/projects/${p.id}/advice/${aid}`],
+    ['DELETE', `/api/projects/${p.id}/advice/${aid}`],
   ] as const) {
     const res = await them.api(method, path, body);
     assert.equal(res.status, 404, `${method} ${path} gave ${res.status}`);
@@ -118,6 +129,7 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   // and a rehearsal id under the wrong project of the right user is also not found
   const p2 = await h.project(me, { name: 'Other' });
   assert.equal((await me.api('GET', `/api/projects/${p2.id}/rehearsals/${rid}`)).status, 404);
+  assert.equal((await me.api('GET', `/api/projects/${p2.id}/advice/${aid}`)).status, 404);
 });
 
 test('API keys: shown once, hashed, one project only, revocable', async () => {
@@ -221,4 +233,62 @@ test('errors keep the same shape everywhere', async () => {
   assert.ok(bad.body.error.message);
   const notUuid = await me.api('GET', '/api/projects/not-a-uuid');
   assert.equal(notUuid.status, 400);
+});
+
+test('launch advice: start, read, list and delete, with a model and with research only', async () => {
+  const llm = openAiCompatible({ apiKey: 'test-key', baseUrl: 'https://model.example/v1', model: 'test-model', fetchImpl: fakeModelFetch, retries: 0 });
+  const h = createHarness({ llm, search: [sampleSearch()] });
+  const me = await h.owner();
+  const p = await h.project(me);
+  const config = await me.api('GET', '/api/config');
+  assert.equal(config.body.advisor.mode, 'full');
+  assert.equal(config.body.advisor.agents.scout.name, 'Bramble the Scout');
+  assert.ok(!JSON.stringify(config.body).includes('test-key'));
+
+  const bad = await me.api('POST', `/api/projects/${p.id}/advice`, { product: 'X', pitch: 'short' });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error.code, 'VALIDATION_FAILED');
+  const started = await me.api('POST', `/api/projects/${p.id}/advice`, { ...ADVICE, currency: 'EUR', buyers: 6 });
+  assert.equal(started.status, 202, JSON.stringify(started.body));
+  await h.settle();
+  const got = await me.api('GET', `/api/projects/${p.id}/advice/${started.body.advice.id}`);
+  assert.equal(got.body.advice.status, 'done', got.body.advice.error);
+  assert.equal(got.body.advice.result.pricing.currency, 'EUR');
+  assert.equal(got.body.advice.result.buyers.length, 6);
+  const listed = await me.api('GET', `/api/projects/${p.id}/advice`);
+  assert.equal(listed.body.advice.length, 1);
+  assert.equal(listed.body.advice[0].result, null, 'lists leave out the full report');
+  assert.equal((await me.api('DELETE', `/api/projects/${p.id}/advice/${started.body.advice.id}`)).status, 200);
+  assert.equal((await me.api('GET', `/api/projects/${p.id}/advice/${started.body.advice.id}`)).status, 404);
+
+  // through a project key, and never across projects
+  const key = (await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'CI' })).body.secret;
+  const bearer = { authorization: `Bearer ${key}` };
+  const viaKey = await h.anon('POST', '/api/v1/advice', ADVICE, bearer);
+  assert.equal(viaKey.status, 202, JSON.stringify(viaKey.body));
+  await h.settle();
+  assert.equal((await h.anon('GET', `/api/v1/advice/${viaKey.body.advice.id}`, undefined, bearer)).body.advice.status, 'done');
+  const other = await h.project(me, { name: 'Other' });
+  const theirs = await me.api('POST', `/api/projects/${other.id}/advice`, ADVICE);
+  await h.settle();
+  assert.equal((await h.anon('GET', `/api/v1/advice/${theirs.body.advice.id}`, undefined, bearer)).status, 404);
+  assert.equal((await h.anon('GET', '/api/v1/advice', undefined, bearer)).body.advice.length, 1);
+
+  // the daily cap is per project
+  for (let i = 0; i < 3; i++) await me.api('POST', `/api/projects/${p.id}/advice`, ADVICE);
+  const capped = await me.api('POST', `/api/projects/${p.id}/advice`, ADVICE);
+  assert.equal(capped.status, 429);
+  assert.equal(capped.body.error.code, 'RATE_LIMITED');
+  await h.settle();
+
+  // with no model the run is research only
+  const offline = createHarness({ search: [sampleSearch()] });
+  const o = await offline.owner();
+  const op = await offline.project(o);
+  assert.equal((await o.api('GET', '/api/config')).body.advisor.mode, 'offline');
+  const r = await o.api('POST', `/api/projects/${op.id}/advice`, ADVICE);
+  await offline.settle();
+  const done = (await o.api('GET', `/api/projects/${op.id}/advice/${r.body.advice.id}`)).body.advice;
+  assert.equal(done.result.mode, 'offline');
+  assert.equal(done.result.plan, null);
 });

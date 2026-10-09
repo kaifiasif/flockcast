@@ -1,4 +1,4 @@
-import { createRehearsals, sqliteStore, textSource, type Engine, type Rehearsals } from '../engine/index.ts';
+import { createAdvisor, createRehearsals, sqliteAdviceStore, sqliteStore, textSource, type Advisor, type Engine, type Llm, type Rehearsals, type SearchAdapter } from '../engine/index.ts';
 import type { AppConfig } from './config/env.ts';
 import { createJobRunner, type JobRunner } from './core/jobs.ts';
 import { createLogger, errorFields, type Logger } from './core/logger.ts';
@@ -23,6 +23,7 @@ export interface AppServices {
   /** Users and sessions. Only the auth module uses this. */
   accounts: AccountsRepository;
   rehearsals: Rehearsals;
+  advisor: Advisor;
   /** For /api/config: which engine and model run, never their keys. */
   engine: { kind: Engine['kind']; model: string | null; provider: string | null; interviews: boolean };
   forUser(userId: string): AppContext;
@@ -35,9 +36,20 @@ export interface AppContext {
   projects: ProjectsRepository;
   keys: ApiKeysRepository;
   rehearsals: Rehearsals;
+  advisor: Advisor;
 }
 
-export function createContext(deps: { db: Database; config: AppConfig; engine: Engine; provider?: string | null; log?: Logger }): AppServices {
+export function createContext(deps: {
+  db: Database;
+  config: AppConfig;
+  engine: Engine;
+  provider?: string | null;
+  /** The model the launch advisor uses; null runs it as research only. */
+  llm?: Llm | null;
+  /** Where the advisor searches. Tests pass canned sources; nothing searches by default. */
+  search?: SearchAdapter[];
+  log?: Logger;
+}): AppServices {
   const log = deps.log ?? createLogger();
   const jobs = createJobRunner(log);
   const rehearsals = createRehearsals({
@@ -49,6 +61,14 @@ export function createContext(deps: { db: Database; config: AppConfig; engine: E
     limits: deps.config.limits,
     onError: (e, at) => log.warn('rehearsal_failed', { project_id: at.scope, rehearsal_id: at.id, ...errorFields(e) }),
   });
+  const advisor = createAdvisor({
+    store: sqliteAdviceStore(deps.db),
+    llm: deps.llm ?? null,
+    search: deps.search ?? [],
+    background: (job) => jobs.enqueue('advice', job),
+    limits: { runsPerScopePerDay: deps.config.limits.advicePerProjectPerDay },
+    onError: (e, at) => log.warn('advice_failed', { project_id: at.scope, advice_id: at.id, ...errorFields(e) }),
+  });
 
   const services: AppServices = {
     db: deps.db,
@@ -57,6 +77,7 @@ export function createContext(deps: { db: Database; config: AppConfig; engine: E
     log,
     accounts: createAccountsRepository(deps.db),
     rehearsals,
+    advisor,
     engine: { kind: deps.engine.kind, model: deps.engine.model, provider: deps.provider ?? null, interviews: deps.engine.canInterview },
     forUser: (userId) => ({
       userId,
@@ -64,6 +85,7 @@ export function createContext(deps: { db: Database; config: AppConfig; engine: E
       projects: createProjectsRepository(deps.db, userId),
       keys: createApiKeysRepository(deps.db, userId),
       rehearsals,
+      advisor,
     }),
   };
   return services;

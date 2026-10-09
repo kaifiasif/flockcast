@@ -1,10 +1,9 @@
 /** The HTTP app end to end: accounts, projects, rehearsals, API keys, and the security baseline. */
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import { currentStep, totpCode } from '../src/modules/auth/totp.ts';
-import { openAiCompatible, sampleSearch } from '../engine/index.ts';
-import { fakeModelFetch } from './fake-model.ts';
-import { createHarness, TEST_PASSWORD } from './helpers.ts';
+import { startModelServer } from './fake-model.ts';
+import { createHarness, modelAgents, TEST_PASSWORD } from './helpers.ts';
 
 const POST = 'Fluent sentences are the dangerous ones. Reviewers skim them and forty percent of errors hide there.';
 const ADVICE = { product: 'Flockcast', pitch: 'Rehearse a social post with a simulated audience before you publish it.', competitors: ['Taplio'] };
@@ -236,8 +235,9 @@ test('errors keep the same shape everywhere', async () => {
 });
 
 test('launch advice: start, read, list and delete, with a model and with research only', async () => {
-  const llm = openAiCompatible({ apiKey: 'test-key', baseUrl: 'https://model.example/v1', model: 'test-model', fetchImpl: fakeModelFetch, retries: 0 });
-  const h = createHarness({ llm, search: [sampleSearch()] });
+  const model = await startModelServer();
+  after(() => model.close());
+  const h = createHarness({ agents: modelAgents(model.url), searchSources: ['sample'] });
   const me = await h.owner();
   const p = await h.project(me);
   const config = await me.api('GET', '/api/config');
@@ -282,7 +282,7 @@ test('launch advice: start, read, list and delete, with a model and with researc
   await h.settle();
 
   // with no model the run is research only
-  const offline = createHarness({ search: [sampleSearch()] });
+  const offline = createHarness({ searchSources: ['sample'] });
   const o = await offline.owner();
   const op = await offline.project(o);
   assert.equal((await o.api('GET', '/api/config')).body.advisor.mode, 'offline');

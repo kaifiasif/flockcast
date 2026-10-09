@@ -32,6 +32,9 @@ const EnvSchema = z
     LLM_API_KEY: z.string().min(1).optional(),
     LLM_BASE_URL: z.url().optional(),
 
+    /** The Python 3.10+ that runs the agents (agents/flockcast_agents). Default: python3 on PATH. */
+    FLOCKCAST_PYTHON: z.string().min(1).max(500).optional(),
+
     REHEARSALS_PER_SUBJECT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(10),
     INTERVIEWS_PER_REHEARSAL: z.coerce.number().int().min(0).max(1000).default(25),
 

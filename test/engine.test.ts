@@ -1,6 +1,6 @@
-/** The engine on its own: no server. Offline swarm, a fake model, the stores, sources and caps. */
+/** The engine on its own: no server. The Python crowd offline and against a test model, the stores, sources and caps. */
 import assert from 'node:assert/strict';
-import { test } from 'node:test';
+import { after, test } from 'node:test';
 import {
   checkBaseUrl,
   createRehearsals,
@@ -8,8 +8,9 @@ import {
   memoryStore,
   mirofishClient,
   mirofishEngine,
-  openAiCompatible,
+  pythonAgents,
   RehearsalError,
+  sentencesOf,
   sqliteStore,
   swarmEngine,
   textSource,
@@ -17,12 +18,12 @@ import {
   type Rehearsal,
   type Store,
 } from '../engine/index.ts';
-import { createWorld, feedFor, seedDraft, apply } from '../engine/swarm/simulate.ts';
-import { platformOf } from '../engine/platforms.ts';
 import { openDatabase } from '../src/db/client.ts';
 import { migrate } from '../src/db/migrate.ts';
 import { creatorOsSource } from '../examples/creator-os/source.ts';
 import { startFakeMiroFish } from './fake-mirofish.ts';
+import { answer, startModelServer, type ModelReply } from './fake-model.ts';
+import { modelAgents } from './helpers.ts';
 
 const POST = 'Fluent sentences are the dangerous ones. Reviewers skim them and forty percent of errors hide there.';
 
@@ -39,18 +40,14 @@ function harness(engine: Engine, store: Store = memoryStore(), extra: Partial<Pa
   return { r, settle, run };
 }
 
-/** Stand-in for an OpenAI-compatible endpoint: answers each prompt type the engine sends, and records calls. */
-function fakeModel({ rateLimitFirst = false, badJsonOnce = false } = {}) {
-  const calls: { url: string; auth: string | null; prompt: string; json: string | undefined }[] = [];
+/** A test model the Python agents call over HTTP: answers each prompt type the crowd sends, and records calls. */
+async function fakeModel({ rateLimitFirst = false, badJsonOnce = false } = {}) {
   let limited = !rateLimitFirst;
   let broke = !badJsonOnce;
-  const fetchImpl = (async (url: string, init: RequestInit) => {
-    const body = JSON.parse(String(init.body));
-    const prompt = body.messages.map((m: { content: string }) => m.content).join('\n');
-    calls.push({ url, auth: (init.headers as Record<string, string>).authorization, prompt, json: body.response_format?.type });
+  const server = await startModelServer((prompt): ModelReply => {
     if (!limited) {
       limited = true;
-      return new Response('{}', { status: 429, headers: { 'retry-after': '0' } });
+      return { status: 429, headers: { 'retry-after': '0' } };
     }
     let content: string;
     if (/Create \d+ distinct people/.test(prompt)) {
@@ -79,15 +76,15 @@ function fakeModel({ rateLimitFirst = false, badJsonOnce = false } = {}) {
     } else if (/## Likely reception/.test(prompt)) content = JSON.stringify({ markdown: '## Likely reception\nMixed.\n\n## Before you post\n- Cite the forty percent.' });
     else if (/Someone asks you:/.test(prompt)) content = JSON.stringify({ answer: 'I wanted a source before sharing it.' });
     else content = '{}';
-    return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
-  }) as unknown as typeof fetch;
-  return { calls, fetchImpl };
+    return { content };
+  });
+  after(() => server.close());
+  return server;
 }
 
-const modelEngine = (opts = {}) => {
-  const fake = fakeModel(opts);
-  const llm = openAiCompatible({ apiKey: 'test-key', baseUrl: 'https://model.example/v1', model: 'test-model', fetchImpl: fake.fetchImpl, retries: 2 });
-  return { engine: swarmEngine({ llm }), fake };
+const modelEngine = async (opts = {}) => {
+  const fake = await fakeModel(opts);
+  return { engine: swarmEngine({ agents: modelAgents(fake.url) }), fake };
 };
 
 test('offline engine: posts the text word for word, labels itself, and needs no key', async () => {
@@ -117,14 +114,14 @@ test('same text and audience give the same result; different settings rerun', as
 });
 
 test('model engine: one call per round, retries 429 and bad JSON, counts calls per rehearsal, interviews work', async () => {
-  const { engine, fake } = modelEngine({ rateLimitFirst: true, badJsonOnce: true });
+  const { engine, fake } = await modelEngine({ rateLimitFirst: true, badJsonOnce: true });
   const { r, run } = harness(engine);
   const x = (await run('p1', POST, { rounds: 3, personas: 3 })).result!;
   assert.equal(x.engine, 'swarm');
   assert.equal(x.model, 'test-model');
   // personas (1 + 429 retry) + 3 rounds (+1 bad JSON retry) + report
   assert.equal(x.model_calls, 7);
-  assert.ok(fake.calls.every((c) => c.auth === 'Bearer test-key' && c.json === 'json_object' && c.url === 'https://model.example/v1/chat/completions'));
+  assert.ok(fake.calls.every((c) => c.auth === 'Bearer test-key' && c.json === 'json_object' && c.url === '/v1/chat/completions'));
   assert.equal(x.counts.replies, 1);
   assert.equal(x.counts.likes, 1);
   assert.equal(x.replies[0].agent_name, 'Sam Skeptic');
@@ -142,8 +139,18 @@ test('model engine: one call per round, retries 429 and bad JSON, counts calls p
   await assert.rejects(r.interview('p1', rid, { agent_id: 42, prompt: 'Hi' }), { status: 404 });
 });
 
+test('a model that fails during a question answers 424, not a server error', async () => {
+  let down = false;
+  const fake = await startModelServer((prompt): ModelReply => (down ? { status: 401 } : { content: JSON.stringify(answer(prompt)) }));
+  after(() => fake.close());
+  const { r, run } = harness(swarmEngine({ agents: modelAgents(fake.url) }));
+  const done = await run('p1', POST, { rounds: 1, personas: 3 });
+  down = true;
+  await assert.rejects(r.interview('p1', done.id, { agent_id: 1, prompt: 'Why?' }), (e: RehearsalError) => e.status === 424 && e.code === 'MODEL_FAILED' && /HTTP 401/.test(e.message));
+});
+
 test('platforms change the words the simulation uses', async () => {
-  const { engine, fake } = modelEngine();
+  const { engine, fake } = await modelEngine();
   const { run } = harness(engine);
   await run('p1', POST, { platform: 'linkedin', rounds: 1, personas: 3 });
   const round = fake.calls.find((c) => /^Round 1/m.test(c.prompt))!;
@@ -196,21 +203,6 @@ test('text source: "---" lines split a thread; subject makes reruns one history'
   const b = await src.load('p', { text: 'v2', subject: 'draft-9' });
   assert.equal(a.subject, b.subject);
   assert.notEqual((await src.load('p', { text: 'v1' })).subject, (await src.load('p', { text: 'v2' })).subject);
-});
-
-test('non-followers only see the post once it spreads', () => {
-  const personas = [
-    { id: 1, name: 'F', segment: 's', bio: 'b', interests: [], stance: 'neutral' as const, activity: 1, follows_author: true },
-    { id: 2, name: 'N', segment: 's', bio: 'b', interests: [], stance: 'neutral' as const, activity: 1, follows_author: false },
-  ];
-  const world = createWorld({ handle: 'me', draft: POST, personas, platform: platformOf('x') });
-  const post = seedDraft(world);
-  const [follower, stranger] = [world.agents[1], world.agents[2]];
-  assert.equal(feedFor(world, follower).length, 1);
-  assert.equal(feedFor(world, stranger).length, 0);
-  assert.ok(apply(world, follower, { agent_id: 1, action: 'repost', post_id: post.post_id }, [post]));
-  assert.equal(feedFor(world, stranger).length, 1);
-  assert.equal(apply(world, follower, { agent_id: 1, action: 'repost', post_id: post.post_id }, [post]), false, 'no double reposts');
 });
 
 test('sqlite store: rows round-trip, scope bounds every query, restarts fail stale jobs', async () => {
@@ -323,15 +315,13 @@ test('MiroFish engine: a failed step fails the rehearsal without leaking its tra
   }
 });
 
-test('replies land on the sentence they argue with, numbers included', async () => {
-  const { summarize, sentencesOf, stanceOf } = await import('../engine/summarize.ts');
+test('summary: replies land on the sentence they argue with, numbers included', async () => {
   const draft = 'Most AI drafts go wrong in the second sentence. Reviewers skim fluent lines, and 40% of errors hide there. Read your draft backwards.';
   const sentences = sentencesOf(draft).map((text) => ({ id: null, text }));
   const posts = [{ post_id: 1, user_id: 0, original_post_id: null, content: draft }];
   const reply = (agent_id: number, content: string) => ({ round_num: 1, agent_id, action_type: 'REPLY', action_args: { post_id: 1, content } });
-  const x = summarize({ draft, sentences, posts, actions: [reply(1, 'Where is the 40% from? I would want the study before I repost this.'), reply(2, 'Reading backwards is a great trick for drafts.')] });
-  assert.equal(stanceOf('Where is the 40% from? I would want the study first.'), 'pushback');
-  assert.equal(stanceOf('Reading backwards is a great trick.'), 'other');
+  // the MiroFish backend hands its feed to the Python summary the same way
+  const { summary: x } = await pythonAgents().run<{ summary: { sentences: { mentions: number; pushback: number }[] } }>('summarize', { draft, sentences, posts, actions: [reply(1, 'Where is the 40% from? I would want the study before I repost this.'), reply(2, 'Reading backwards is a great trick for drafts.')] });
   assert.equal(x.sentences[1].pushback, 1, 'the 40% reply is about the second sentence');
   assert.equal(x.sentences[2].mentions, 1);
   assert.equal(x.sentences[2].pushback, 0);

@@ -130,14 +130,20 @@ export function answer(prompt: string): unknown {
   return {};
 }
 
-/** The same canned replies as an in-process fetch, for tests that should not open a port. */
-export const fakeModelFetch = (async (_url: string, init: RequestInit) => {
-  const { messages } = JSON.parse(String(init.body)) as { messages: { content: string }[] };
-  const content = JSON.stringify(answer(messages.map((m) => m.content).join('\n')));
-  return new Response(JSON.stringify({ choices: [{ message: { content } }] }), { status: 200, headers: { 'content-type': 'application/json' } });
-}) as unknown as typeof fetch;
+export interface ModelCall {
+  url: string;
+  auth: string | undefined;
+  prompt: string;
+  json: string | undefined;
+}
+export type ModelReply = { status?: number; headers?: Record<string, string>; content?: string };
 
-export function startFakeModel(port = 4199): Promise<Server> {
+/**
+ * An OpenAI-compatible endpoint on 127.0.0.1 that the Python agents call over real HTTP. `reply` picks
+ * the answer for each prompt; by default it is the canned `answer` above. Every call is recorded.
+ */
+export async function startModelServer(reply: (prompt: string, call: number) => ModelReply = (prompt) => ({ content: JSON.stringify(answer(prompt)) }), port = 0) {
+  const calls: ModelCall[] = [];
   const server = createServer((req, res) => {
     let body = '';
     req.on('data', (c) => (body += c));
@@ -146,12 +152,21 @@ export function startFakeModel(port = 4199): Promise<Server> {
         res.writeHead(404).end();
         return;
       }
-      const { messages } = JSON.parse(body) as { messages: { content: string }[] };
-      const content = JSON.stringify(answer(messages.map((m) => m.content).join('\n')));
-      res.writeHead(200, { 'content-type': 'application/json' }).end(JSON.stringify({ choices: [{ message: { content } }] }));
+      const parsed = JSON.parse(body) as { messages: { content: string }[]; response_format?: { type?: string } };
+      const prompt = parsed.messages.map((m) => m.content).join('\n');
+      calls.push({ url: req.url, auth: req.headers.authorization, prompt, json: parsed.response_format?.type });
+      const r = reply(prompt, calls.length);
+      res.writeHead(r.status ?? 200, { 'content-type': 'application/json', ...r.headers }).end(r.content === undefined ? '{}' : JSON.stringify({ choices: [{ message: { content: r.content } }] }));
     });
   });
-  return new Promise((resolve) => server.listen(port, '127.0.0.1', () => resolve(server)));
+  await new Promise<void>((resolve) => server.listen(port, '127.0.0.1', resolve));
+  const { port: bound } = server.address() as { port: number };
+  return { url: `http://127.0.0.1:${bound}/v1`, calls, server, close: () => new Promise<void>((resolve) => server.close(() => resolve())) };
+}
+
+/** The canned model on a fixed port, for `npm run demo` and trying the app by hand. */
+export async function startFakeModel(port = 4199): Promise<Server> {
+  return (await startModelServer(undefined, port)).server;
 }
 
 if (import.meta.main) {

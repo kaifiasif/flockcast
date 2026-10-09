@@ -7,6 +7,7 @@ Instructions for AI coding assistants (Claude Code, ChatGPT/Codex, Cursor, Copil
 Flockcast rehearses a social post with a simulated audience before it is published. Three surfaces share one codebase:
 
 - `engine/`: the reusable core. `createRehearsals({ store, engine, sources })`. No HTTP, no accounts. Every call takes a **scope** and never reads or writes outside it.
+- `agents/flockcast_agents/`: **all agent code, in Python** (3.10+, standard library only): the rehearsal crowd (`swarm/`) and the launch crew (`advisor/`). Node starts one process per job through `engine/agents.ts`; Python never touches the database.
 - `src/`: the standalone server (Hono, zod, `node:sqlite`). Accounts, projects, API keys, the app API and `/api/v1`.
 - `web/`: the React 19 app (Tailwind v4, shadcn/Radix, TanStack Query, Hono RPC client), built into `public/`.
 
@@ -17,8 +18,9 @@ Flockcast rehearses a social post with a simulated audience before it is publish
 ```bash
 npm install && npm run build:web   # once
 npm run demo                        # app on :4180 with a stand-in model; no key needed
-npm test                            # 40 node:test tests
-npm run check                       # typecheck server + web, then tests: run before every commit
+npm test                            # node:test tests (they run the Python agents)
+npm run test:py                     # unittest tests for agents/
+npm run check                       # typecheck server + web, then both test suites: run before every commit
 ```
 
 Node 22.18 or newer runs the TypeScript directly; there is no server build step. Imports use the `.ts` extension. Web changes must ship with a rebuilt `public/` (`cd web && npm run build`), because the Dockerfile serves it as committed.
@@ -37,6 +39,8 @@ Node 22.18 or newer runs the TypeScript directly; there is no server build step.
 **Secrets stay on the server.** Model keys come from env only, are never returned by `/api/config`, never logged (the logger redacts key-like fields; keep names like `api_key`, `token`, `secret`), and never reach the web bundle. API keys and sessions are stored as SHA-256 hashes.
 
 **Free by default.** The default model provider is a free tier (Groq). No feature may require a paid service; with no key the engine must still work as a clearly labelled offline estimate.
+
+**Agents are Python.** Prompts, model calls, simulation, research, pricing and planning live in `agents/flockcast_agents`; never add agent logic to TypeScript. Keep Python to the standard library, send an explicit user-agent on every outbound request, and validate every model answer before using it. Node owns storage, scopes, caps and HTTP.
 
 **MiroFish is AGPL.** It runs only as a separate process behind `engine/mirofish/client.ts`. Never copy code from MiroFish into this repository.
 
@@ -57,7 +61,7 @@ See `web/CONVENTIONS.md`. In short: types come from the server via `@/api/types`
 
 ## Tests
 
-`node:test` with real behaviour, not mocks of the code under test. `test/helpers.ts` builds an app on an in-memory database; `test/fake-model.ts` stands in for an OpenAI-compatible model. A bug fix comes with a test that fails before the fix. Never skip or delete a failing test to get green.
+`node:test` with real behaviour, not mocks of the code under test. `test/helpers.ts` builds an app on an in-memory database; `test/fake-model.ts` serves a stand-in OpenAI-compatible model over HTTP that the Python agents call. Python logic gets a `unittest` test in `agents/tests`. A bug fix comes with a test that fails before the fix. Never skip or delete a failing test to get green.
 
 ## Before you finish
 

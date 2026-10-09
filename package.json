@@ -1,6 +1,6 @@
 {
   "name": "flockcast",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "description": "Flockcast: rehearse a post with a simulated audience before you publish it. Standalone app, HTTP API, and an embeddable engine.",
   "type": "module",
   "private": true,
@@ -11,8 +11,9 @@
     "start": "node --no-warnings --env-file-if-exists=.env src/main.ts",
     "dev": "node --no-warnings --env-file-if-exists=.env --watch src/main.ts",
     "test": "node --no-warnings --test test/*.test.ts",
+    "test:py": "cd agents && python3 -B -m unittest discover -s tests -t .",
     "typecheck": "tsc --noEmit -p .",
-    "check": "npm run typecheck && npm test && cd web && npm run typecheck",
+    "check": "npm run typecheck && npm test && npm run test:py && cd web && npm run typecheck",
     "build:web": "cd web && npm install && npm run build",
     "dev:web": "cd web && npm run dev",
     "demo": "node --no-warnings scripts/demo.ts",

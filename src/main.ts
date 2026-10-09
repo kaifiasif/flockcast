@@ -1,6 +1,6 @@
 /** Boot: parse env, open and migrate the database, pick the engine, serve. */
 import { serve } from '@hono/node-server';
-import { llmFromEnv, mirofishClient, mirofishEngine, searchFromEnv, swarmEngine, type Engine, type Llm } from '../engine/index.ts';
+import { llmFromEnv, mirofishClient, mirofishEngine, pythonAgents, searchSourcesFromEnv, swarmEngine, type Agents, type Engine } from '../engine/index.ts';
 import { createApp } from './app.ts';
 import { configFromEnv, loadEnv, type Env } from './config/env.ts';
 import { createContext } from './context.ts';
@@ -15,9 +15,9 @@ const SESSION_SWEEP_MS = 60 * 60 * 1000;
 
 const USER_AGENT = 'flockcast/1.0';
 
-function engineFromEnv(env: Env, llm: Llm | null): { engine: Engine; provider: string | null } {
-  if (env.REHEARSAL_ENGINE === 'mirofish') return { engine: mirofishEngine({ client: mirofishClient({ baseUrl: env.MIROFISH_URL as string }) }), provider: 'mirofish' };
-  return { engine: swarmEngine({ llm }), provider: llm?.provider ?? null };
+function engineFromEnv(env: Env, agents: Agents): { engine: Engine; provider: string | null } {
+  if (env.REHEARSAL_ENGINE === 'mirofish') return { engine: mirofishEngine({ client: mirofishClient({ baseUrl: env.MIROFISH_URL as string }), agents }), provider: 'mirofish' };
+  return { engine: swarmEngine({ agents }), provider: agents.llm?.provider ?? null };
 }
 
 function main(): void {
@@ -29,11 +29,10 @@ function main(): void {
   const { applied } = migrate(db);
   if (applied.length) log.info('migrated', { applied });
 
-  // one model client serves rehearsals and the launch advisor
-  const llm = llmFromEnv(env, { userAgent: USER_AGENT });
-  const { engine, provider } = engineFromEnv(env, llm);
-  const search = searchFromEnv(env, { userAgent: USER_AGENT });
-  const app = createContext({ db, config: configFromEnv(env), engine, provider, llm, search, log });
+  // the agents are Python; one model setting serves the rehearsal crowd and the launch crew
+  const agents = pythonAgents({ llm: llmFromEnv(env), python: env.FLOCKCAST_PYTHON, userAgent: USER_AGENT, tavilyKey: env.TAVILY_API_KEY });
+  const { engine, provider } = engineFromEnv(env, agents);
+  const app = createContext({ db, config: configFromEnv(env), engine, provider, agents, searchSources: searchSourcesFromEnv(env), log });
   const interrupted = app.rehearsals.recover();
   if (interrupted) log.warn('rehearsals_interrupted', { count: interrupted });
   const cutOff = app.advisor.recover();

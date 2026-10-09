@@ -184,8 +184,6 @@ export interface AdviceStore {
   failStale(atIso: string): number;
 }
 
-/** Where findings come from. Each adapter calls one fixed host; nothing a user types becomes a URL. */
-export interface SearchAdapter {
-  readonly name: string;
-  search(query: string, opts: { limit: number; signal?: AbortSignal }): Promise<Omit<Finding, 'id'>[]>;
-}
+/** Where Bramble the Scout searches. Each name maps to one fixed host in agents/flockcast_agents/advisor/search.py. */
+export const SEARCH_SOURCES = ['hackernews', 'reddit', 'web', 'sample'] as const;
+export type SearchSource = (typeof SEARCH_SOURCES)[number];

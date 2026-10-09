@@ -11,6 +11,7 @@ import {
   createRehearsals,
   ensureRehearsalsTable,
   llmFromEnv,
+  pythonAgents,
   sqliteStore,
   swarmEngine,
   textSource,
@@ -24,7 +25,8 @@ export function creatorOsRehearsals(db: SqlDb & { exec(sql: string): void }, env
   return createRehearsals({
     store: sqliteStore(db, { table }),
     // REHEARSAL_LLM_* settings, or the shared LLM_API_KEY Creator OS already sets: one free key covers both
-    engine: swarmEngine({ llm: llmFromEnv(env, { userAgent: 'creator-os' }) }),
+    // the agents are Python (agents/flockcast_agents); Creator OS needs python3 on PATH, or set `python`
+    engine: swarmEngine({ agents: pythonAgents({ llm: llmFromEnv(env), userAgent: 'creator-os' }) }),
     sources: [creatorOsSource(db), textSource()],
     defaults: { platform: 'x', handle: 'the author' },
   });

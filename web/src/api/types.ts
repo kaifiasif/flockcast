@@ -20,3 +20,9 @@ export type Rehearsal = Ok<Api['projects'][':id']['rehearsals'][':rid']['$get']>
 export type RehearsalResult = NonNullable<Rehearsal['result']>;
 export type RehearsalInput = InferRequestType<Api['projects'][':id']['rehearsals']['$post']>['json'];
 export type Interview = Rehearsal['interviews'][number];
+
+export type Advice = Ok<Api['projects'][':id']['advice'][':aid']['$get']>['advice'];
+export type AdviceResult = NonNullable<Advice['result']>;
+export type AdviceInput = InferRequestType<Api['projects'][':id']['advice']['$post']>['json'];
+export type AdvisorInfo = AppConfig['advisor'];
+export type AdvisorAgent = keyof AdvisorInfo['agents'];

@@ -20,6 +20,7 @@ export function systemRoutes(app: AppServices) {
       limits: { ...app.rehearsals.limits },
       defaults: app.rehearsals.defaults,
       signup: app.config.signup,
+      advisor: { mode: app.advisor.mode, sources: app.advisor.sources, agents: app.advisor.agents, limits: app.advisor.limits },
     }),
   );
 }

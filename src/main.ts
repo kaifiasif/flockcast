@@ -1,6 +1,6 @@
 /** Boot: parse env, open and migrate the database, pick the engine, serve. */
 import { serve } from '@hono/node-server';
-import { llmFromEnv, mirofishClient, mirofishEngine, swarmEngine, type Engine } from '../engine/index.ts';
+import { llmFromEnv, mirofishClient, mirofishEngine, searchFromEnv, swarmEngine, type Engine, type Llm } from '../engine/index.ts';
 import { createApp } from './app.ts';
 import { configFromEnv, loadEnv, type Env } from './config/env.ts';
 import { createContext } from './context.ts';
@@ -13,9 +13,10 @@ const SHUTDOWN_GRACE_MS = 10_000;
 const LOCAL_HOSTS = new Set(['127.0.0.1', 'localhost', '::1']);
 const SESSION_SWEEP_MS = 60 * 60 * 1000;
 
-function engineFromEnv(env: Env): { engine: Engine; provider: string | null } {
+const USER_AGENT = 'flockcast/1.0';
+
+function engineFromEnv(env: Env, llm: Llm | null): { engine: Engine; provider: string | null } {
   if (env.REHEARSAL_ENGINE === 'mirofish') return { engine: mirofishEngine({ client: mirofishClient({ baseUrl: env.MIROFISH_URL as string }) }), provider: 'mirofish' };
-  const llm = llmFromEnv(env, { userAgent: 'flockcast/1.0' });
   return { engine: swarmEngine({ llm }), provider: llm?.provider ?? null };
 }
 
@@ -28,10 +29,15 @@ function main(): void {
   const { applied } = migrate(db);
   if (applied.length) log.info('migrated', { applied });
 
-  const { engine, provider } = engineFromEnv(env);
-  const app = createContext({ db, config: configFromEnv(env), engine, provider, log });
+  // one model client serves rehearsals and the launch advisor
+  const llm = llmFromEnv(env, { userAgent: USER_AGENT });
+  const { engine, provider } = engineFromEnv(env, llm);
+  const search = searchFromEnv(env, { userAgent: USER_AGENT });
+  const app = createContext({ db, config: configFromEnv(env), engine, provider, llm, search, log });
   const interrupted = app.rehearsals.recover();
   if (interrupted) log.warn('rehearsals_interrupted', { count: interrupted });
+  const cutOff = app.advisor.recover();
+  if (cutOff) log.warn('advice_interrupted', { count: cutOff });
   if (!LOCAL_HOSTS.has(host) && !app.config.secureCookies) {
     // session cookies sent over plain http can be read on the network
     log.warn('insecure_cookies', { host, hint: 'Serve over HTTPS with NODE_ENV=production so session cookies are Secure.' });

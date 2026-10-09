@@ -1,0 +1,31 @@
+# Render Blueprint: https://render.com/docs/blueprint-spec
+# One Docker web service with a persistent disk for the SQLite database.
+# Apply it from Render: New > Blueprint. Free alternative: run it on your own machine (npm start).
+services:
+  - type: web
+    name: flockcast
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: starter # persistent disks need a paid instance; on the free plan data resets on redeploy
+    region: oregon
+    healthCheckPath: /api/health
+    autoDeploy: true
+    disk:
+      name: flockcast-data
+      mountPath: /app/data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: HOST
+        value: 0.0.0.0
+      - key: TRUST_PROXY # rate limits per visitor, not per Render proxy
+        value: "1"
+      - key: REHEARSAL_SIGNUP # only the owner can create the first account
+        value: closed
+      - key: REHEARSAL_OWNER_EMAIL # the email you will sign up with
+        sync: false
+      - key: REHEARSAL_LLM_PROVIDER
+        value: groq
+      - key: REHEARSAL_LLM_API_KEY # free key from console.groq.com
+        sync: false

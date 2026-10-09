@@ -1,0 +1,236 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/dm-sans';
+@import '@fontsource/fragment-mono';
+
+/* No dark theme: dark: utilities in shared components never apply. */
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * Flockcast follows the Charm design system: warm stone surfaces, one coral brand colour, hairline
+ * borders, pill controls and 24px cards. Coral is kept for the brand, the primary action and pushback;
+ * everything else is stone. Light only, by design.
+ */
+:root {
+  --radius: 1.5rem;
+  --background: #f7f7f5;
+  --foreground: #1c1917;
+  --body: #57534e;
+  --card: #fbfaf9;
+  --card-foreground: #1c1917;
+  --popover: #fbfaf9;
+  --popover-foreground: #1c1917;
+  --primary: #e4544b;
+  --primary-foreground: #ffffff;
+  --brand-text: #c9443a;
+  --brand-soft: #fbe9e6;
+  --band: #f1f2ea;
+  --secondary: #f1f2ea;
+  --secondary-foreground: #1c1917;
+  --muted: #f1f0ee;
+  --muted-foreground: #79716b;
+  --accent: #f1f0ee;
+  --accent-foreground: #1c1917;
+  --destructive: #c9443a;
+  --border: #e7e6e5;
+  --input: #e7e6e5;
+  --ring: #a8a29e;
+  --support: #4f7a5a;
+  --support-soft: #e8efe6;
+  --autofill: #fbfaf9;
+}
+
+@theme inline {
+  --animate-caret-blink: caret-blink 1.25s ease-out infinite;
+  @keyframes caret-blink {
+    0%,
+    70%,
+    100% {
+      opacity: 1;
+    }
+    20%,
+    50% {
+      opacity: 0;
+    }
+  }
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'DM Sans Variable', 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'Fragment Mono', ui-monospace, monospace;
+  --radius-sm: 4px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 24px;
+  --radius-2xl: 32px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-body: var(--body);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-brand: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-band: var(--band);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-support: var(--support);
+  --color-support-soft: var(--support-soft);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  :root {
+    color-scheme: light;
+    accent-color: var(--primary);
+  }
+  body {
+    @apply bg-background text-body antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    @apply font-display text-foreground;
+    font-weight: 700;
+    letter-spacing: -0.03em;
+    text-wrap: balance;
+  }
+  p {
+    text-wrap: pretty;
+  }
+  ::selection {
+    background-color: var(--brand-soft);
+    color: var(--foreground);
+  }
+}
+
+/* Browser autofill paints its own grey-blue; cover it with the field's colour. */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+textarea:-webkit-autofill,
+input:autofill {
+  -webkit-text-fill-color: var(--foreground);
+  caret-color: var(--foreground);
+  box-shadow:
+    inset 0 0 0 100vmax var(--autofill),
+    var(--tw-ring-offset-shadow, 0 0 #0000),
+    var(--tw-ring-shadow, 0 0 #0000);
+  transition:
+    background-color 600000s 0s,
+    color 600000s 0s;
+}
+
+@layer utilities {
+  /* The one place mono shows: small uppercase labels. */
+  .label-mono {
+    font-family: var(--font-mono);
+    font-size: 0.6875rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted-foreground);
+  }
+  .container-page {
+    width: 100%;
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+  @media (min-width: 768px) {
+    .container-page {
+      padding-inline: 2rem;
+    }
+  }
+  .coral-gradient {
+    background-image: linear-gradient(180deg, #ec6b62 0%, #e4544b 55%, #d8473e 100%);
+    box-shadow:
+      inset 0 1px 0 rgb(255 255 255 / 0.25),
+      0 1px 2px rgb(201 68 58 / 0.25),
+      0 4px 12px -4px rgb(228 84 75 / 0.45);
+  }
+  .coral-gradient:hover {
+    background-image: linear-gradient(180deg, #ef7870 0%, #e75d54 55%, #dc4c43 100%);
+  }
+  /* A sentence the crowd pushed back on: a coral underline that thickens with the share. */
+  .pushback {
+    text-decoration-line: underline;
+    text-decoration-color: color-mix(in srgb, var(--primary) calc(var(--share, 0.5) * 100%), transparent);
+    text-decoration-thickness: calc(2px + var(--share, 0.5) * 3px);
+    text-underline-offset: 4px;
+  }
+
+  /* Hero demo: replies arrive one by one, once, on load. */
+  .arrive {
+    animation: arrive 480ms cubic-bezier(0.2, 0.7, 0.2, 1) both;
+  }
+  .shimmer {
+    background: linear-gradient(90deg, var(--muted) 0%, #fbfaf9 50%, var(--muted) 100%);
+    background-size: 200% 100%;
+    animation: shimmer 1.4s linear infinite;
+  }
+}
+
+@keyframes arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes shimmer {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .arrive,
+  .shimmer {
+    animation: none !important;
+  }
+}
+
+@layer components {
+  /* Tabs: one pill slides between triggers. */
+  [data-slot='tabs-glide'] {
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    border-radius: 9999px;
+    background: var(--card);
+    box-shadow:
+      0 1px 2px rgb(28 25 23 / 0.08),
+      0 0 0 1px var(--border);
+    transition:
+      translate 380ms cubic-bezier(0.3, 1.25, 0.5, 1),
+      width 380ms cubic-bezier(0.3, 1.25, 0.5, 1);
+    pointer-events: none;
+  }
+  [data-glide='on'] > [data-slot='tabs-trigger'] {
+    z-index: 1;
+    background: transparent !important;
+    box-shadow: none !important;
+    border-color: transparent !important;
+  }
+  [data-slot='progress-indicator'] {
+    background: linear-gradient(90deg, #f5b3ad, var(--primary)) !important;
+  }
+}

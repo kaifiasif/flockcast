@@ -1,0 +1,14 @@
+# MiroFish as an unmodified sidecar for Flockcast. Uses the upstream image as published, so the
+# AGPL-3.0 code stays in its own container and Flockcast only calls its HTTP API on port 5001.
+services:
+  mirofish:
+    image: ghcr.io/666ghj/mirofish:latest
+    container_name: mirofish
+    env_file:
+      - .env
+    ports:
+      - "127.0.0.1:5001:5001"   # backend API, local only; Flockcast sets MIROFISH_URL=http://localhost:5001
+      - "127.0.0.1:3000:3000"   # MiroFish's own UI, handy for inspecting a rehearsal's graph and agents
+    restart: unless-stopped
+    volumes:
+      - ./data/uploads:/app/backend/uploads

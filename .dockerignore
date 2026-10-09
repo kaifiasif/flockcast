@@ -1,0 +1,10 @@
+node_modules
+web/node_modules
+data
+.env
+test
+examples
+docs
+web
+scripts
+*.zip

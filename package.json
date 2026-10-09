@@ -1,0 +1,35 @@
+{
+  "name": "flockcast",
+  "version": "1.0.0",
+  "description": "Flockcast: rehearse a post with a simulated audience before you publish it. Standalone app, HTTP API, and an embeddable engine.",
+  "type": "module",
+  "private": true,
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "start": "node --no-warnings --env-file-if-exists=.env src/main.ts",
+    "dev": "node --no-warnings --env-file-if-exists=.env --watch src/main.ts",
+    "test": "node --no-warnings --test test/*.test.ts",
+    "typecheck": "tsc --noEmit -p .",
+    "check": "npm run typecheck && npm test && cd web && npm run typecheck",
+    "build:web": "cd web && npm install && npm run build",
+    "dev:web": "cd web && npm run dev",
+    "demo": "node --no-warnings scripts/demo.ts",
+    "stickers": "cd web && npm run stickers"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.3",
+    "@hono/zod-validator": "^0.9.1",
+    "hono": "^4.13.13",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "^7.0.2"
+  },
+  "exports": {
+    ".": "./engine/index.ts"
+  },
+  "license": "MIT"
+}

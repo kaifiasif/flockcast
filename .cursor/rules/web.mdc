@@ -1,0 +1,12 @@
+---
+description: Rules for the React web app
+globs: web/src/**/*.{ts,tsx,css}
+alwaysApply: false
+---
+
+Follow web/CONVENTIONS.md.
+- Types from @/api/types; never redeclare response shapes or use any.
+- Server access only through a feature's api.ts TanStack Query hooks.
+- Build from @/components/ui; Charm tokens live in src/index.css (coral brand, warm stone, light theme only).
+- Sentence-case copy; buttons say what they do; aria-label on icon-only buttons; works at 375px; respect prefers-reduced-motion.
+- After changing the web app, rebuild public/ with `cd web && npm run build`.

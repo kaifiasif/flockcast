@@ -1,14 +1,13 @@
 /**
- * Option B: Creator OS calls a running Flockcast server over HTTP, with a project API key.
+ * A typed client for any app that talks to a Flockcast server over HTTP: a writing tool, a CMS, a
+ * Slack bot, a CI job. Copy this file; it has no dependencies beyond fetch.
  *
- * Create a project in Flockcast (platform X, your handle, your audience), make an API key named
- * "Creator OS" on its API keys tab, and give Creator OS two settings:
+ * Make a project in Flockcast, create an API key on its API keys tab, and give your app two settings:
  *
  *   FLOCKCAST_URL=https://your-flockcast.example
  *   FLOCKCAST_KEY=flk_...
  *
- * Creator OS keeps the blind-study rule itself: it only calls rehearse() after a decision.
- * The key never goes to the browser; Creator OS's server makes these calls.
+ * Call it from your server only: the key must never reach a browser. A key works for its one project.
  */
 export interface FlockcastClientOptions {
   url: string;
@@ -53,12 +52,36 @@ export function flockcastClient({ url, key, fetchImpl = fetch }: FlockcastClient
     async ask(id: string, agentId: number, prompt: string) {
       return (await call('POST', `/rehearsals/${id}/interview`, { agent_id: agentId, prompt })).interview;
     },
+    /** The project this key belongs to. */
+    async project() {
+      return (await call('GET', '/project')).project;
+    },
+    /** Starts a launch advisor run for a product: research, simulated buyers, prices and a plan. */
+    async advise(input: { product: string; pitch: string; audience?: string; price_idea?: string; competitors?: string[]; billing?: 'subscription' | 'one_time'; currency?: 'USD' | 'EUR' | 'GBP' | 'INR'; buyers?: number }) {
+      return (await call('POST', '/advice', input)).advice;
+    },
+    async getAdvice(id: string) {
+      return (await call('GET', `/advice/${id}`)).advice;
+    },
+    /** Polls until the advice is done or failed. */
+    async waitAdvice(id: string, { everyMs = 3000, timeoutMs = 10 * 60_000 } = {}) {
+      const until = Date.now() + timeoutMs;
+      for (;;) {
+        const a = await this.getAdvice(id);
+        if (a.status === 'done' || a.status === 'failed') return a;
+        if (Date.now() > until) throw new Error('The advice is still being worked on. Check again later.');
+        await new Promise((ok) => setTimeout(ok, everyMs));
+      }
+    },
   };
 }
 
 /*
  *   const flockcast = flockcastClient({ url: process.env.FLOCKCAST_URL!, key: process.env.FLOCKCAST_KEY! });
- *   const started = await flockcast.rehearse(finalText, { subject: `run:${runId}`, title: draftTitle });
+ *   const started = await flockcast.rehearse(draftText, { subject: `draft:${draftId}`, title: draftTitle });
  *   const done = await flockcast.wait(started.id);
  *   console.log(done.result.pushback_share, done.result.report?.markdown);
+ *
+ *   const advice = await flockcast.waitAdvice((await flockcast.advise({ product: 'Acme', pitch: 'What it does, in a sentence or two.' })).id);
+ *   console.log(advice.result.plan?.headline, advice.result.pricing?.tiers);
  */

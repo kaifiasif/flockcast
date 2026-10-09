@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppConfig, useProject } from '@/features/projects/api';
+import { takeDraft } from '@/lib/draft-handoff';
 import { BackTo } from '@/features/projects/project-page';
 import { useRehearsal, useStartRehearsal } from './api';
 
@@ -25,7 +26,7 @@ function Composer({ project, from }: { project: Project; from?: Rehearsal }) {
   const config = useAppConfig();
   const start = useStartRehearsal(project.id);
   // "Edit and run again" starts from an earlier rehearsal's text and settings
-  const [text, setText] = useState(from?.posts.join('\n---\n') ?? '');
+  const [text, setText] = useState(() => from?.posts.join('\n---\n') ?? takeDraft());
   const [title, setTitle] = useState(from?.title ?? '');
   const [platform, setPlatform] = useState(from?.settings.platform ?? project.platform);
   const [personas, setPersonas] = useState(from?.settings.personas ?? project.personas);

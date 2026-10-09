@@ -1,6 +1,6 @@
 /**
- * Rehearsals in SQLite, through any wrapper with get/all/run (Creator OS's and this app's both fit, and
- * so does a thin wrapper over node:sqlite). Every query is bounded by scope.
+ * Rehearsals in SQLite, through any wrapper with get/all/run (this app's fits, and
+ * so does a thin wrapper over node:sqlite or better-sqlite3). Every query is bounded by scope.
  */
 import type { Store, StoredRehearsal } from '../types.ts';
 
@@ -19,7 +19,7 @@ const tableName = (t = DEFAULT_TABLE) => {
 /**
  * The table. Apps with their own migrations copy this into one (as this app's 0003 does);
  * `ensureRehearsalsTable` is for apps without a migration system. Apps that already have a table
- * called "rehearsals" (Creator OS does) pass another name, such as "flockcast_rehearsals".
+ * called "rehearsals" pass another name, such as "flockcast_rehearsals".
  */
 export const rehearsalsSql = (table = DEFAULT_TABLE) => `
 CREATE TABLE IF NOT EXISTS ${table} (

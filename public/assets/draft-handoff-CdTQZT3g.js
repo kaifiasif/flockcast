@@ -1,0 +1,1 @@
+var e=`flockcast:draft`;function t(t){try{sessionStorage.setItem(e,t)}catch{}}function n(){try{let t=sessionStorage.getItem(e)??``;return sessionStorage.removeItem(e),t}catch{return``}}export{n,t};

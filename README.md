@@ -12,6 +12,24 @@ It comes three ways from one codebase:
 
 Simulated audiences are a rehearsal, not a forecast. The app says so wherever it shows results.
 
+## Launch advisor
+
+Each project also has a **Launch advisor** for the product you are about to launch. Describe it in a few sentences and a crew of five agents does the rest, written for someone who has never priced or launched anything:
+
+| Agent | Job |
+|---|---|
+| Bramble the Scout | Searches Hacker News and Reddit (no key needed) and, with a free `TAVILY_API_KEY`, the open web for people talking about the problem |
+| Professor Quill | Reads what was found, names the competitors and copies the exact words people used, each linked to its page |
+| Mystic Mira | Asks a crowd of simulated buyers how much they like it, what puts them off and what they would pay |
+| Lord Ledger | Turns the buyers' four price answers (Van Westendorp) into an acceptable range and the plan prices, by arithmetic rather than by the model |
+| Captain Compass | Makes the call (launch, launch after changes, or rethink) and writes the features to build first, the launch steps and a launch post you can rehearse |
+
+![The launch crew](docs/screenshots/advisor-crew.png)
+
+A run is four model calls. Quotes that are not word for word in a page found are dropped. Without a model key the crew still searches and shows what it found, labelled as research only. Each project gets 5 runs a day (`ADVICE_PER_PROJECT_PER_DAY`).
+
+![A launch advice report](docs/screenshots/advisor-report.png)
+
 ## Run it
 
 Needs Node 22.18 or newer. The server runs its TypeScript directly; only the web app has a build step.
@@ -29,7 +47,7 @@ Other commands:
 
 ```bash
 npm run demo          # the app on :4180 with a built-in stand-in model, so every screen works with no key
-npm test              # 30 tests: engine, adapters, accounts, API, isolation between accounts, security checks
+npm test              # 40 tests: engine, advisor, adapters, accounts, API, isolation between accounts, security checks
 npm run check         # typecheck server and web, then the tests
 npm run dev           # server with reload; `npm run dev:web` for the web app with hot reload on :5173
 npm run stickers      # regenerate the mascot sticker files
@@ -50,7 +68,7 @@ All optional; see `.env.example`.
 | `REHEARSAL_LLM_PROVIDER` | `groq` | `groq`, `gemini`, `openrouter`, `ollama`, `openai`, `custom` |
 | `REHEARSAL_LLM_API_KEY` | | Free keys at console.groq.com, aistudio.google.com, openrouter.ai |
 | `REHEARSAL_LLM_MODEL` / `_BASE_URL` | per provider | Override the model, or point `custom` at any OpenAI-compatible URL |
-| `LLM_API_KEY` / `LLM_BASE_URL` | | Read when the `REHEARSAL_` ones are unset, so Creator OS's key works as is |
+| `LLM_API_KEY` / `LLM_BASE_URL` | | Generic shared names, read when the `REHEARSAL_` ones are unset, so a key another app on the host already sets works as is |
 | `REHEARSAL_ENGINE` / `MIROFISH_URL` | `swarm` | `mirofish` uses a MiroFish server you run (see `sidecar/mirofish`) |
 | `REHEARSALS_PER_SUBJECT_PER_DAY` | `10` | Spend cap per draft |
 | `INTERVIEWS_PER_REHEARSAL` | `25` | Spend cap per rehearsal |
@@ -66,12 +84,14 @@ Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or gene
 - Light theme only, following the Charm design language.
 - `package.json` is `"private": true`. Remove that when you publish the engine to npm.
 
-## Using it from Creator OS or another app
+## Plug it into any app
 
-See [docs/integration.md](docs/integration.md). In short:
+Flockcast is standalone: it does not depend on any other app, and any app can use it. See [docs/integration.md](docs/integration.md). In short:
 
-- **Over HTTP**: make a project and a key in the app, then `POST /api/v1/rehearsals` with `Authorization: Bearer flk_...`. `examples/creator-os/http-client.ts` is a ready client.
-- **As a library**: `createRehearsals({ store, engine, sources })` with your own adapters. `examples/creator-os/embed.ts` wires it into Creator OS's database, using a `flockcast_rehearsals` table (Creator OS already has a `rehearsals` table) and keeping rehearsal closed until the creator has decided on the draft.
+- **Over HTTP, from any language**: make a project and a key in the app, then call `/api/v1` with `Authorization: Bearer flk_...`. Ready clients: `examples/http-client/flockcast-client.ts` (TypeScript) and `examples/http-client/flockcast_client.py` (Python, standard library only). Both cover rehearsals, follower questions and launch advice.
+- **As a library, in a Node app**: `createRehearsals({ store, engine, sources })` and `createAdvisor({ store, llm, search })` with your own adapters. `examples/custom-source/posts-table.ts` is a template for reading drafts from your own database.
+
+`examples/creator-os/` is one worked example of both modes, for Creator OS. Nothing outside that folder knows about it.
 
 ## Deploy
 
@@ -82,12 +102,12 @@ Put it behind HTTPS and set `NODE_ENV=production`, `TRUST_PROXY=1` and `REHEARSA
 
 ## The mascot
 
-Pip is Flockcast's plush coral bird, drawn as die-cut stickers in nine moods: plain, skeptic, fan, newcomer, lurker, amplifier, analyst, sleepy and oops. The app uses them for followers, empty states and errors. The SVG files are in `public_static/stickers/` (and in `stickers/` as SVG and PNG), free to use with Flockcast.
+Pip is Flockcast's plush coral bird, drawn as die-cut stickers in nine moods: plain, skeptic, fan, newcomer, lurker, amplifier, analyst, sleepy and oops. The app uses them for followers, empty states and errors. The launch advisor's crew are Pips too: Bramble the Scout (pith helmet and binoculars), Professor Quill (mortarboard and quill), Mystic Mira (turban and crystal ball), Lord Ledger (top hat, monocle and coin) and Captain Compass (captain's hat and compass). The SVG files are in `public_static/stickers/` (and in `stickers/` as SVG and PNG), free to use with Flockcast.
 
 ## More
 
 - [docs/architecture.md](docs/architecture.md): how the pieces fit
-- [docs/integration.md](docs/integration.md): HTTP API, adapters, Creator OS
+- [docs/integration.md](docs/integration.md): HTTP API, clients, adapters, worked examples
 - [docs/security.md](docs/security.md): each common web risk and how it is handled
 - [sidecar/mirofish/README.md](sidecar/mirofish/README.md): running MiroFish beside Flockcast
 

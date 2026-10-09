@@ -1,12 +1,15 @@
 /**
  * Pip, the Flockcast mascot: a plush coral bird, drawn as a die-cut sticker. Each variant is one kind
  * of follower in a rehearsal (the skeptic in glasses, the fan in a party hat, the newcomer in a beanie)
- * plus a few for app states (sleepy while loading, a bandage when something breaks).
+ * plus a few for app states (sleepy while loading, a bandage when something breaks), and one for each
+ * agent of the launch advisor (the scout in a pith helmet, the baron in a top hat).
  *
  * The art is static markup with no user input in it, so the component renders it as SVG markup, and
  * `npm run stickers` writes the same art to standalone SVG and PNG sticker files.
  */
-export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops';
+export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops' | AgentVariant;
+/** The launch advisor's crew: one sticker per agent, named in engine/advisor/agents.ts. */
+export type AgentVariant = 'scout' | 'professor' | 'murmur' | 'baron' | 'captain';
 
 interface Parts {
   /** drawn over the body, inside the sticker edge: hats, glasses, props */
@@ -69,6 +72,33 @@ export const PIP_VARIANTS: Record<PipVariant, Parts & { label: string; blurb: st
     blurb: 'Something broke.',
     front: `<g transform="rotate(-25 74 34)"><rect x="62" y="29" width="26" height="10" rx="5" fill="#F2D6B3"/><circle cx="72" cy="34" r="1" fill="#C9A47A"/><circle cx="78" cy="34" r="1" fill="#C9A47A"/></g>`,
     face: `<path d="M44 43 l8 6 M52 43 l-8 6 M68 43 l8 6 M76 43 l-8 6" stroke="${INK}" stroke-width="2.4" stroke-linecap="round"/><path d="M55 55 q5 -3 10 0 q-5 6 -10 0z" fill="#F2B15F"/>${cheeks}`,
+  },
+
+  scout: {
+    label: 'Bramble the Scout',
+    blurb: 'Combs Reddit and Hacker News for what people say.',
+    front: `<path d="M34 31 c0 -24 52 -24 52 0z" fill="#C8A96B"/><path d="M34 31 c0 -6 52 -6 52 0" fill="none" stroke="#8C6B3E" stroke-width="4"/><ellipse cx="60" cy="32" rx="33" ry="5" fill="#B8955A"/><circle cx="60" cy="11" r="3" fill="#8C6B3E"/><path d="M42 58 q18 14 36 0" fill="none" stroke="#8C6B3E" stroke-width="2"/><rect x="44" y="66" width="13" height="17" rx="5" fill="${INK}"/><rect x="63" y="66" width="13" height="17" rx="5" fill="${INK}"/><rect x="55" y="70" width="10" height="6" rx="2" fill="#44403C"/><circle cx="50.5" cy="80" r="4" fill="#8FB3C9"/><circle cx="69.5" cy="80" r="4" fill="#8FB3C9"/><circle cx="49" cy="78.6" r="1.2" fill="#fff"/><circle cx="68" cy="78.6" r="1.2" fill="#fff"/>`,
+  },
+  professor: {
+    label: 'Professor Quill',
+    blurb: 'Reads every thread and copies the exact words.',
+    front: `<path d="M42 21 v10 q18 8 36 0 v-10z" fill="${INK}"/><path d="M60 6 L94 17 L60 28 L26 17z" fill="${INK}"/><path d="M60 17 L90 20 L91 34" fill="none" stroke="#F2B15F" stroke-width="2"/><circle cx="91" cy="36" r="3" fill="#F2B15F"/><g fill="none" stroke="#C98B2E" stroke-width="1.8"><circle cx="48" cy="46" r="7.5"/><circle cx="72" cy="46" r="7.5"/><path d="M55.5 46 h9"/></g><path d="M90 96 q10 -26 24 -42 q-6 20 -20 44z" fill="#FBFAF9" stroke="#A8A29E" stroke-width="1.4"/><path d="M92 96 q8 -20 18 -36" stroke="#A8A29E" stroke-width="1" fill="none"/>`,
+  },
+  murmur: {
+    label: 'Mystic Mira',
+    blurb: 'Gathers a crowd of buyers and asks what they would pay.',
+    front: `<path d="M30 34 c-2 -26 62 -26 60 0 q-30 -8 -60 0z" fill="#7C5CA6"/><path d="M36 24 q24 -12 48 0" fill="none" stroke="#9B7FC4" stroke-width="3"/><circle cx="60" cy="25" r="4.5" fill="#F2B15F"/><circle cx="60" cy="25" r="2" fill="#E4544B"/><circle cx="60" cy="81" r="14" fill="#D9CCF3" fill-opacity=".92" stroke="#9B7FC4" stroke-width="1.6"/><path d="M52 75 q4 -5 9 -6" stroke="#fff" stroke-width="2.4" fill="none" stroke-linecap="round"/><circle cx="56" cy="85" r="2.2" fill="#E4544B"/><circle cx="63" cy="83" r="2.2" fill="#E4544B"/><circle cx="66" cy="89" r="2.2" fill="#E4544B"/><path d="M47 96 h26 l-4 6 h-18z" fill="#8C6B3E"/>`,
+    loose: `<path d="M12 30 l2 -5 l2 5 l5 2 l-5 2 l-2 5 l-2 -5 l-5 -2z M104 20 l1.5 -4 l1.5 4 l4 1.5 l-4 1.5 l-1.5 4 l-1.5 -4 l-4 -1.5z" fill="#9B7FC4"/>`,
+  },
+  baron: {
+    label: 'Lord Ledger',
+    blurb: 'Turns the answers into a price people say yes to.',
+    front: `<rect x="43" y="-2" width="34" height="29" rx="3" fill="${INK}"/><rect x="43" y="18" width="34" height="5" fill="#E4544B"/><ellipse cx="60" cy="27" rx="27" ry="4.5" fill="${INK}"/><circle cx="72" cy="46" r="8" fill="#fff" fill-opacity=".2" stroke="#F2B15F" stroke-width="2.4"/><path d="M79 50 q6 10 2 22" fill="none" stroke="#F2B15F" stroke-width="1.4"/><circle cx="93" cy="84" r="10" fill="#F2B15F" stroke="#C98B2E" stroke-width="2"/><path d="M96 79 q-3 -2 -6 0 q-2 3 3 5 q4 2 1 5 q-3 2 -6 0 M93 76 v16" fill="none" stroke="#C98B2E" stroke-width="1.6" stroke-linecap="round"/>`,
+  },
+  captain: {
+    label: 'Captain Compass',
+    blurb: 'Makes the call and writes your launch plan.',
+    front: `<path d="M35 31 c-4 -24 54 -24 50 0z" fill="#FBFAF9" stroke="#D6D3D1" stroke-width="1.4"/><path d="M33 30 q27 8 54 0 l-3 6 q-24 7 -48 0z" fill="${INK}"/><rect x="36" y="25" width="48" height="5" fill="#1F3A5F"/><circle cx="60" cy="19" r="4.5" fill="#F2B15F"/><path d="M57 19 h6 M60 16 v6" stroke="#C98B2E" stroke-width="1.2"/><circle cx="60" cy="80" r="13" fill="#FBFAF9" stroke="#F2B15F" stroke-width="3.4"/><path d="M60 69 l3.5 11 h-7z" fill="#E4544B"/><path d="M60 91 l3.5 -11 h-7z" fill="${INK}"/><circle cx="60" cy="80" r="1.8" fill="#F2B15F"/>`,
   },
 };
 

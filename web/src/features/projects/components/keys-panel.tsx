@@ -78,7 +78,7 @@ function CreateKeyDialog({ project, open, onOpenChange }: { project: Project; op
             </DialogHeader>
             <Field>
               <FieldLabel htmlFor="key-name">Where it will be used</FieldLabel>
-              <Input id="key-name" required maxLength={60} autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Creator OS" />
+              <Input id="key-name" required maxLength={60} autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="My app" />
               <FieldDescription>So you know which key to revoke later.</FieldDescription>
               {create.error && <FieldError>{errorMessage(create.error)}</FieldError>}
             </Field>
@@ -138,7 +138,7 @@ export function KeysPanel({ project }: { project: Project }) {
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-xl">API keys</h2>
-            <p className="text-sm text-body">Let another app, like Creator OS or a script, rehearse posts in this project.</p>
+            <p className="text-sm text-body">Let any other app, script or CI job rehearse posts and ask for launch advice in this project.</p>
           </div>
           <Button onClick={() => setCreating(true)}>New API key</Button>
         </div>

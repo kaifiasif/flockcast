@@ -5,6 +5,7 @@ import { Page, PageHeader } from '@/components/shared/page';
 import { QueryView } from '@/components/shared/query-view';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { AdvisorPanel } from '@/features/advice/advisor-panel';
 import { RehearsalList } from '@/features/rehearsals/rehearsal-list';
 import { cn } from '@/lib/utils';
 import { useAppConfig, useProject } from './api';
@@ -13,6 +14,7 @@ import { SetupPanel } from './components/setup-panel';
 
 const TABS: { tab: ProjectTab; label: string }[] = [
   { tab: 'rehearsals', label: 'Rehearsals' },
+  { tab: 'advisor', label: 'Launch advisor' },
   { tab: 'setup', label: 'Crowd and setup' },
   { tab: 'keys', label: 'API keys' },
 ];
@@ -63,6 +65,7 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
                 ))}
               </nav>
               {tab === 'rehearsals' && <RehearsalList project={p} />}
+              {tab === 'advisor' && <AdvisorPanel project={p} />}
               {tab === 'setup' && <SetupPanel project={p} />}
               {tab === 'keys' && <KeysPanel project={p} />}
             </>

@@ -4,7 +4,7 @@
  *   const rehearsals = createRehearsals({
  *     store: sqliteStore(db),                       // or memoryStore(), or your own Store
  *     engine: swarmEngine({ llm: llmFromEnv() }),   // offline estimate when no key is set
- *     sources: [textSource()],                      // plus your app's adapter, e.g. creatorOsSource(db)
+ *     sources: [textSource()],                      // plus your app's own adapter (see examples/custom-source)
  *   });
  *   const r = await rehearsals.start(projectId, { ref: { text: 'My post' }, settings: { platform: 'linkedin' } });
  */
@@ -22,6 +22,15 @@ export type { SqlDb } from './stores/sqlite.ts';
 export { memoryStore } from './stores/memory.ts';
 export { textSource } from './sources/text.ts';
 export type { TextRef } from './sources/text.ts';
-export { creatorOsSource } from './sources/creator-os.ts';
 export { summarize, stanceOf, sentencesOf } from './summarize.ts';
 export * from './types.ts';
+export { createAdvisor, DEFAULT_ADVISOR_LIMITS } from './advisor/service.ts';
+export type { Advisor, AdviceRequest, AdvisorLimits, CreateAdvisorOptions } from './advisor/service.ts';
+export { sqliteAdviceStore, memoryAdviceStore, ADVICE_SQL } from './advisor/store.ts';
+export { hackerNews, reddit, tavily, searchFromEnv, SEARCH_SOURCES } from './advisor/search.ts';
+export { sampleSearch } from './advisor/sample.ts';
+export type { SearchEnv } from './advisor/search.ts';
+export { priceRange, pricePoints, friendlyPrice } from './advisor/pricing.ts';
+export { ADVISOR_AGENTS, AGENTS_AT } from './advisor/agents.ts';
+export type { AdvisorAgent } from './advisor/agents.ts';
+export * from './advisor/types.ts';

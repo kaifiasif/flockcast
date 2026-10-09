@@ -6,6 +6,7 @@ import { createProjectsRepository, type Project } from '../../db/repositories/pr
 import { nowIso } from '../../domain/ids.ts';
 import { createRateLimiter, rateLimit } from '../../http/middleware/rate-limit.ts';
 import { validate } from '../../http/validate.ts';
+import { AdviceInput, AdviceListQuery } from '../advice/advice.schemas.ts';
 import { hashApiKey, looksLikeApiKey } from '../projects/projects.routes.ts';
 import { IdParam, InterviewInput, ListQuery, RehearsalInput } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
@@ -36,7 +37,7 @@ function requireApiKey(app: AppServices): MiddlewareHandler<KeyEnv> {
 }
 
 /**
- * The API other apps call (Creator OS, scripts, CI). Same engine, same limits; the key picks the project.
+ * The API other apps call (any app, script or CI job, in any language). Same engine, same limits; the key picks the project.
  * Mounted at /api/v1.
  */
 export function apiV1Routes(app: AppServices) {
@@ -58,6 +59,9 @@ export function apiV1Routes(app: AppServices) {
       const interview = await engineCall(() => app.rehearsals.interview(c.var.project.id, c.req.valid('param').id, c.req.valid('json')));
       return c.json({ interview });
     })
+    .get('/advice', validate('query', AdviceListQuery), (c) => c.json({ advice: app.advisor.list(c.var.project.id, c.req.valid('query')) }))
+    .post('/advice', validate('json', AdviceInput), async (c) => c.json({ advice: await engineCall(() => app.advisor.start(c.var.project.id, c.req.valid('json'))) }, 202))
+    .get('/advice/:id', validate('param', IdParam), async (c) => c.json({ advice: await engineCall(() => app.advisor.get(c.var.project.id, c.req.valid('param').id)) }))
     .all('*', () => {
       throw notFound('Endpoint');
     });

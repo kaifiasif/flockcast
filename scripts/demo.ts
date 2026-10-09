@@ -14,6 +14,8 @@ Object.assign(process.env, {
   REHEARSAL_LLM_BASE_URL: `http://localhost:${MODEL_PORT}/v1`,
   REHEARSAL_LLM_API_KEY: 'demo',
   REHEARSAL_LLM_MODEL: 'demo-model',
+  // canned findings, so the launch advisor works offline too; set ADVISOR_SOURCES=hackernews,reddit to search for real
+  ADVISOR_SOURCES: process.env.ADVISOR_SOURCES ?? 'sample',
 });
 console.log(`demo: stand-in model on http://localhost:${MODEL_PORT}/v1 (canned replies), database ${process.env.REHEARSAL_DB}`);
 await import('../src/main.ts');

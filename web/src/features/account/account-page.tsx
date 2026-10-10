@@ -3,6 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { AccountCard } from '@/features/auth/components/account-card';
 import { TwoStepCard } from '@/features/auth/components/two-step-card';
 import { useAppConfig } from '@/features/projects/api';
+import { PlanCard } from './plan-card';
 
 const PROVIDERS: Record<string, string> = { groq: 'Groq', gemini: 'Google Gemini', openrouter: 'OpenRouter', ollama: 'Ollama on this machine', openai: 'OpenAI', custom: 'A custom endpoint', mirofish: 'MiroFish' };
 
@@ -52,6 +53,7 @@ export function AccountPage() {
           <TwoStepCard />
         </div>
         <ServerCard />
+        <PlanCard />
       </div>
     </Page>
   );

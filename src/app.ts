@@ -16,6 +16,8 @@ import { authRoutes } from './modules/auth/auth.routes.ts';
 import { projectsRoutes } from './modules/projects/projects.routes.ts';
 import { apiV1Routes } from './modules/rehearsals/api-v1.routes.ts';
 import { comparisonsRoutes } from './modules/rehearsals/comparisons.routes.ts';
+import { governanceRoutes } from './modules/team/governance.routes.ts';
+import { teamRoutes } from './modules/team/team.routes.ts';
 import { rehearsalsRoutes } from './modules/rehearsals/rehearsals.routes.ts';
 import { healthRoutes, systemRoutes } from './modules/system/system.routes.ts';
 
@@ -50,6 +52,8 @@ export function createApp(app: AppServices, options: { publicDir?: string } = {}
     .route('/', projectsRoutes())
     .route('/', rehearsalsRoutes())
     .route('/', comparisonsRoutes())
+    .route('/', teamRoutes())
+    .route('/', governanceRoutes())
     .route('/', adviceRoutes())
     .all('*', () => {
       throw new AppError(404, ErrorCode.NOT_FOUND, 'No such endpoint.');

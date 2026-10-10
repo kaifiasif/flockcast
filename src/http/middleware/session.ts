@@ -16,6 +16,7 @@ export function requireSession(app: AppServices): MiddlewareHandler<AppEnv> {
     if (!session) throw new AppError(401, ErrorCode.UNAUTHORIZED, 'Log in to continue.');
     c.set('session', session);
     c.set('ctx', app.forUser(session.user.id));
+    c.set('app', app);
     await next();
   };
 }

@@ -11,12 +11,18 @@ import { cn } from '@/lib/utils';
 import { useAppConfig, useProject } from './api';
 import { KeysPanel } from './components/keys-panel';
 import { SetupPanel } from './components/setup-panel';
+import { useSession } from '@/features/auth/api';
+import { AuditPanel } from '@/features/team/audit-panel';
+import { ROLE, TeamPanel } from '@/features/team/team-panel';
+import { WebhooksPanel } from '@/features/team/webhooks-panel';
 
-const TABS: { tab: ProjectTab; label: string }[] = [
+const TABS: { tab: ProjectTab; label: string; owner?: boolean }[] = [
   { tab: 'rehearsals', label: 'Rehearsals' },
   { tab: 'advisor', label: 'Launch advisor' },
-  { tab: 'setup', label: 'Crowd and setup' },
-  { tab: 'keys', label: 'API keys' },
+  { tab: 'team', label: 'Team' },
+  { tab: 'setup', label: 'Crowd and setup', owner: true },
+  { tab: 'keys', label: 'API and webhooks', owner: true },
+  { tab: 'audit', label: 'Usage and audit', owner: true },
 ];
 
 export function BackTo({ href, children }: { href: string; children: ReactNode }) {
@@ -30,6 +36,7 @@ export function BackTo({ href, children }: { href: string; children: ReactNode }
 export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
   const project = useProject(id);
   const config = useAppConfig();
+  const me = useSession().data?.user?.id;
 
   return (
     <Page>
@@ -44,9 +51,11 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
                 description={
                   <>
                     {p.handle} on {p.platform === 'generic' ? 'any platform' : (platform?.name ?? p.platform)}. {p.personas} followers, {p.rounds} rounds per rehearsal.
+                    {p.role !== 'owner' && ` You are ${ROLE[p.role].name.toLowerCase()} here.`}
                   </>
                 }
                 actions={
+                  (p.role === 'owner' || p.role === 'editor') && (
                   <>
                     <Button variant="outline" asChild>
                       <a href={hrefOf({ name: 'compare', id })}>Compare drafts</a>
@@ -55,10 +64,11 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
                       <a href={hrefOf({ name: 'compose', id })}>Rehearse a post</a>
                     </Button>
                   </>
+                  )
                 }
               />
               <nav aria-label="Project sections" className="-mx-1 flex gap-1 overflow-x-auto px-1">
-                {TABS.map((t) => (
+                {TABS.filter((t) => !t.owner || p.role === 'owner').map((t) => (
                   <a
                     key={t.tab}
                     href={hrefOf({ name: 'project', id, tab: t.tab })}
@@ -71,8 +81,15 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
               </nav>
               {tab === 'rehearsals' && <RehearsalList project={p} />}
               {tab === 'advisor' && <AdvisorPanel project={p} />}
-              {tab === 'setup' && <SetupPanel project={p} />}
-              {tab === 'keys' && <KeysPanel project={p} />}
+              {tab === 'setup' && p.role === 'owner' && <SetupPanel project={p} />}
+              {tab === 'keys' && p.role === 'owner' && (
+                <div className="grid gap-10">
+                  <KeysPanel project={p} />
+                  <WebhooksPanel project={p} />
+                </div>
+              )}
+              {tab === 'team' && <TeamPanel project={p} userId={me ?? ''} />}
+              {tab === 'audit' && p.role === 'owner' && <AuditPanel project={p} />}
             </>
           );
         }}

@@ -14,7 +14,8 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { useAppConfig } from '@/features/projects/api';
+import { useAppConfig, useProject } from '@/features/projects/api';
+import { ApprovalPanel } from '@/features/team/approval-panel';
 import { BackTo } from '@/features/projects/project-page';
 import { formatDate, formatPercent, plural as count, verbPlural } from '@/lib/format';
 import { cn } from '@/lib/utils';
@@ -138,6 +139,7 @@ function Replies({ x }: { x: RehearsalResult }) {
 function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
   const x = r.result!;
   const config = useAppConfig();
+  const project = useProject(projectId).data;
   const platform = config.data?.platforms.find((p) => p.id === x.platform);
   const verbs = platform?.verbs ?? { like: 'like', repost: 'repost', reply: 'reply', quote: 'quote' };
 
@@ -180,7 +182,9 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
 
       <AskFollower rehearsal={r} projectId={projectId} />
 
-      <OutcomePanel r={r} projectId={projectId} />
+      {project && <ApprovalPanel r={r} project={project} />}
+
+      {project && (project.role === 'owner' || project.role === 'editor') && <OutcomePanel r={r} projectId={projectId} />}
 
       <p className="text-xs text-muted-foreground">
         {engineLabel(x)}
@@ -193,6 +197,8 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
 
 export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
   const rehearsal = useRehearsal(id, rid);
+  const role = useProject(id).data?.role;
+  const canEdit = role === 'owner' || role === 'editor';
   const start = useStartRehearsal(id);
   const remove = useDeleteRehearsal(id);
   const back = hrefOf({ name: 'project', id, tab: 'rehearsals' });
@@ -214,7 +220,7 @@ export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
               title={r.variant ? `Draft ${r.variant}: ${r.title}` : r.title}
               description={`${formatDate(r.created_at)}. ${r.settings.personas} followers, ${r.settings.mode === 'quick' ? 'quick read' : `${r.settings.rounds} rounds`}${r.result ? `, ${engineLabel(r.result)}` : ''}.`}
               actions={
-                !isActive(r) && (
+                !isActive(r) && canEdit && (
                   <>
                   {r.status === 'done' && (
                     <Button variant="outline" asChild>

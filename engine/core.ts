@@ -69,6 +69,8 @@ export interface CreateRehearsalsOptions {
   limits?: Partial<Limits>;
   defaults?: Partial<RehearsalSettings>;
   now?: () => Date;
+  /** Called when a rehearsal finishes or fails, for notifications. Errors in it are ignored. */
+  onFinish?: (rehearsal: Rehearsal) => void;
   /** Receives job failures with the full error, for the server log. People only see the message. */
   onError?: (e: unknown, ctx: { scope: string; id: string }) => void;
 }
@@ -183,6 +185,12 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
     } catch (e) {
       opts.onError?.(e, { scope: row.scope, id: row.id });
       set({ status: 'failed', error: (e as Error).message.slice(0, 500), finished_at: now().toISOString() });
+    }
+    try {
+      const done = store.get(row.scope, row.id);
+      if (done && opts.onFinish) opts.onFinish(toPublic(done));
+    } catch {
+      // a notification must never fail the rehearsal
     }
   }
 

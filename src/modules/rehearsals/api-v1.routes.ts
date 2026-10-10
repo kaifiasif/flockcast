@@ -4,7 +4,10 @@ import { AppError, ErrorCode, notFound } from '../../core/errors.ts';
 import { findActiveKey, touchKey } from '../../db/repositories/api-keys.repository.ts';
 import { createProjectsRepository, type Project } from '../../db/repositories/projects.repository.ts';
 import { nowIso } from '../../domain/ids.ts';
+import { requireFeature } from '../../core/plans.ts';
+import { rehearsalsSince } from '../../db/repositories/governance.repository.ts';
 import { createRateLimiter, rateLimit } from '../../http/middleware/rate-limit.ts';
+import { checkRehearsalPlan } from '../projects/access.ts';
 import { validate } from '../../http/validate.ts';
 import { AdviceInput, AdviceListQuery } from '../advice/advice.schemas.ts';
 import { hashApiKey, looksLikeApiKey } from '../projects/projects.routes.ts';
@@ -31,6 +34,8 @@ function requireApiKey(app: AppServices): MiddlewareHandler<KeyEnv> {
     const project = createProjectsRepository(app.db, found.user_id).find(found.project_id);
     if (!project) throw new AppError(401, ErrorCode.UNAUTHORIZED, 'This key belongs to a project that no longer exists.');
     if (!found.last_used_at || Date.now() - Date.parse(found.last_used_at) > TOUCH_EVERY_MS) touchKey(app.db, found.id, nowIso());
+    // a key keeps working only while the owner's plan includes the API
+    requireFeature(app.planOf(project), 'api');
     c.set('project', project);
     c.set('keyId', found.id);
     await next();
@@ -42,6 +47,12 @@ function requireApiKey(app: AppServices): MiddlewareHandler<KeyEnv> {
  * Mounted at /api/v1.
  */
 export function apiV1Routes(app: AppServices) {
+  const actor = (c: { var: KeyEnv['Variables'] }) => ({ userId: null, actor: `api key ${c.var.keyId.slice(0, 8)}` });
+  const used = (project: Project) => {
+    const now = new Date();
+    const owner = app.db.get<{ user_id: string }>('SELECT user_id FROM projects WHERE id = ?', project.id)?.user_id ?? '';
+    return rehearsalsSince(app.db, owner, new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1)).toISOString());
+  };
   const costly = createRateLimiter(app.config.rateLimits.costly);
   return new Hono<KeyEnv>()
     .use(requireApiKey(app))
@@ -52,26 +63,35 @@ export function apiV1Routes(app: AppServices) {
     })
     .get('/rehearsals', validate('query', ListQuery), (c) => c.json({ rehearsals: listFor(app.rehearsals, c.var.project.id, c.req.valid('query')) }))
     .post('/rehearsals', validate('json', RehearsalInput), async (c) => {
-      const rehearsal = await startFor(app.rehearsals, c.var.project, c.req.valid('json'));
+      const body = c.req.valid('json');
+      checkRehearsalPlan(app.planOf(c.var.project), used(c.var.project), body, c.var.project);
+      const rehearsal = await startFor(app.rehearsals, c.var.project, body);
+      app.audit(c.var.project.id, actor(c), 'rehearsal.started', rehearsal.id, { title: rehearsal.title });
       return c.json({ rehearsal }, 202);
     })
     .get('/rehearsals/:id', validate('param', IdParam), async (c) => c.json({ rehearsal: await engineCall(() => app.rehearsals.get(c.var.project.id, c.req.valid('param').id)) }))
     .post('/rehearsals/:id/interview', validate('param', IdParam), validate('json', InterviewInput), async (c) => {
+      requireFeature(app.planOf(c.var.project), 'interviews');
       const interview = await engineCall(() => app.rehearsals.interview(c.var.project.id, c.req.valid('param').id, c.req.valid('json')));
       return c.json({ interview });
     })
     .put('/rehearsals/:id/outcome', validate('param', IdParam), validate('json', OutcomeInput), async (c) => {
+      requireFeature(app.planOf(c.var.project), 'calibration');
       const rehearsal = await engineCall(() => app.rehearsals.recordOutcome(c.var.project.id, c.req.valid('param').id, c.req.valid('json')));
       return c.json({ rehearsal });
     })
     .post('/comparisons', validate('json', CompareInput), async (c) => {
-      const rehearsals = await compareFor(app.rehearsals, c.var.project, c.req.valid('json'));
+      const body = c.req.valid('json');
+      const plan = app.planOf(c.var.project);
+      requireFeature(plan, 'compare');
+      checkRehearsalPlan(plan, used(c.var.project), body, c.var.project, body.drafts.length);
+      const rehearsals = await compareFor(app.rehearsals, c.var.project, body);
       return c.json({ group_id: rehearsals[0].group_id!, rehearsals }, 202);
     })
     .get('/comparisons/:id', validate('param', IdParam), (c) => c.json({ group_id: c.req.valid('param').id, rehearsals: groupFor(app.rehearsals, c.var.project.id, c.req.valid('param').id) }))
     .get('/calibration', (c) => c.json({ calibration: app.rehearsals.calibration(c.var.project.id) }))
     .get('/advice', validate('query', AdviceListQuery), (c) => c.json({ advice: app.advisor.list(c.var.project.id, c.req.valid('query')) }))
-    .post('/advice', validate('json', AdviceInput), async (c) => c.json({ advice: await engineCall(() => app.advisor.start(c.var.project.id, c.req.valid('json'))) }, 202))
+    .post('/advice', validate('json', AdviceInput), async (c) => (requireFeature(app.planOf(c.var.project), 'advisor'), c.json({ advice: await engineCall(() => app.advisor.start(c.var.project.id, c.req.valid('json'))) }, 202)))
     .get('/advice/:id', validate('param', IdParam), async (c) => c.json({ advice: await engineCall(() => app.advisor.get(c.var.project.id, c.req.valid('param').id)) }))
     .all('*', () => {
       throw notFound('Endpoint');

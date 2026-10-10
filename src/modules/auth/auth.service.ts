@@ -11,6 +11,8 @@ export interface PublicUser {
   email: string;
   mfa_enabled: boolean;
   created_at: string;
+  /** The account's plan id. With plans off it is shown but not enforced. */
+  plan: string;
 }
 
 export interface Session {
@@ -18,7 +20,7 @@ export interface Session {
   user: PublicUser;
 }
 
-const toPublic = (a: Account): PublicUser => ({ id: a.id, email: a.email, mfa_enabled: a.totp_secret !== null, created_at: a.created_at });
+const toPublic = (a: Account): PublicUser => ({ id: a.id, email: a.email, mfa_enabled: a.totp_secret !== null, created_at: a.created_at, plan: a.plan });
 
 /** One message for "no such account" and "wrong password", so log-in cannot be used to find accounts. */
 const wrongCredentials = () => new AppError(401, ErrorCode.UNAUTHORIZED, 'That email and password do not match an account.');

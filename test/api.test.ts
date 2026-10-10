@@ -108,6 +108,9 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   assert.equal(cmp.status, 202, JSON.stringify(cmp.body));
   await h.settle();
   const gid = cmp.body.group_id;
+  const inv = (await me.api('POST', `/api/projects/${p.id}/invites`, { role: 'viewer' })).body.invite.id;
+  const appr = (await me.api('POST', `/api/projects/${p.id}/rehearsals/${rid}/approval`, {})).body.approval.id;
+  const hook = (await me.api('POST', `/api/projects/${p.id}/webhooks`, { url: 'https://example.com/hook', events: ['rehearsal.finished'] })).body.webhook.id;
   for (const [method, path, body] of [
     ['GET', `/api/projects/${p.id}`],
     ['PUT', `/api/projects/${p.id}`, { name: 'x', handle: 'x' }],
@@ -129,6 +132,24 @@ test('object-level access: another user sees 404 for every project, rehearsal an
     ['PUT', `/api/projects/${p.id}/rehearsals/${rid}/outcome`, { likes: 1, reposts: 0, replies: 0 }],
     ['DELETE', `/api/projects/${p.id}/rehearsals/${rid}/outcome`],
     ['GET', `/api/projects/${p.id}/calibration`],
+    ['GET', `/api/projects/${p.id}/members`],
+    ['POST', `/api/projects/${p.id}/invites`, { role: 'viewer' }],
+    ['DELETE', `/api/projects/${p.id}/invites/${inv}`],
+    ['PUT', `/api/projects/${p.id}/members/${me.user.id}`, { role: 'viewer' }],
+    ['DELETE', `/api/projects/${p.id}/members/${me.user.id}`],
+    ['GET', `/api/projects/${p.id}/approvals`],
+    ['GET', `/api/projects/${p.id}/rehearsals/${rid}/approval`],
+    ['POST', `/api/projects/${p.id}/rehearsals/${rid}/approval`, {}],
+    ['POST', `/api/projects/${p.id}/approvals/${appr}/decision`, { decision: 'approved' }],
+    ['POST', `/api/projects/${p.id}/approvals/${appr}/withdraw`],
+    ['GET', `/api/projects/${p.id}/audit`],
+    ['GET', `/api/projects/${p.id}/audit/csv`],
+    ['GET', `/api/projects/${p.id}/webhooks`],
+    ['POST', `/api/projects/${p.id}/webhooks`, { url: 'https://example.com/hook', events: ['rehearsal.finished'] }],
+    ['DELETE', `/api/projects/${p.id}/webhooks/${hook}`],
+    ['POST', `/api/projects/${p.id}/webhooks/${hook}/test`],
+    ['GET', `/api/projects/${p.id}/usage`],
+    ['GET', `/api/projects/${p.id}/export`],
   ] as const) {
     const res = await them.api(method, path, body);
     assert.equal(res.status, 404, `${method} ${path} gave ${res.status}`);

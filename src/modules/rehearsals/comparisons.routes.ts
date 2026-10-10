@@ -4,7 +4,8 @@ import type { Project } from '../../db/repositories/projects.repository.ts';
 import { notFound } from '../../core/errors.ts';
 import { router } from '../../http/types.ts';
 import { validate } from '../../http/validate.ts';
-import { ownProject } from '../projects/projects.routes.ts';
+import { requireFeature } from '../../core/plans.ts';
+import { checkRehearsalPlan, ownProject } from '../projects/access.ts';
 import { CompareInput, GroupParam, IdParam, OutcomeInput, ProjectRehearsalParam } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
 import { settingsFor } from './rehearsals.routes.ts';
@@ -31,8 +32,13 @@ export function comparisonsRoutes() {
   return router()
     .post('/projects/:id/comparisons', validate('param', IdParam), validate('json', CompareInput), async (c) => {
       const ctx = c.var.ctx;
-      const project = ownProject(ctx, c.req.valid('param').id);
-      const rehearsals = await compareFor(ctx.rehearsals, project, c.req.valid('json'));
+      const project = ownProject(ctx, c.req.valid('param').id, 'edit');
+      const body = c.req.valid('json');
+      const plan = ctx.planOf(project);
+      requireFeature(plan, 'compare');
+      checkRehearsalPlan(plan, ctx.usedThisMonth(project), body, project, body.drafts.length);
+      const rehearsals = await compareFor(ctx.rehearsals, project, body);
+      ctx.audit(project, 'comparison.started', rehearsals[0].group_id!, { drafts: rehearsals.length });
       return c.json({ group_id: rehearsals[0].group_id!, rehearsals }, 202);
     })
     .get('/projects/:id/comparisons/:gid', validate('param', GroupParam), (c) => {
@@ -44,14 +50,18 @@ export function comparisonsRoutes() {
     .put('/projects/:id/rehearsals/:rid/outcome', validate('param', ProjectRehearsalParam), validate('json', OutcomeInput), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
-      return c.json({ rehearsal: await engineCall(() => ctx.rehearsals.recordOutcome(id, rid, c.req.valid('json'))) });
+      const project = ownProject(ctx, id, 'edit');
+      requireFeature(ctx.planOf(project), 'calibration');
+      const rehearsal = await engineCall(() => ctx.rehearsals.recordOutcome(id, rid, c.req.valid('json')));
+      ctx.audit(project, 'outcome.recorded', rid);
+      return c.json({ rehearsal });
     })
     .delete('/projects/:id/rehearsals/:rid/outcome', validate('param', ProjectRehearsalParam), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
+      const project = ownProject(ctx, id, 'edit');
       await engineCall(() => ctx.rehearsals.clearOutcome(id, rid));
+      ctx.audit(project, 'outcome.removed', rid);
       return c.json({ ok: true });
     })
     .get('/projects/:id/calibration', validate('param', IdParam), (c) => {

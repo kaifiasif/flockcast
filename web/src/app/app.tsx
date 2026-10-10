@@ -20,8 +20,27 @@ const ComposePage = lazy(() => import('@/features/rehearsals/compose-page').then
 const RehearsalPage = lazy(() => import('@/features/rehearsals/rehearsal-page').then((m) => ({ default: m.RehearsalPage })));
 const ComparePage = lazy(() => import('@/features/compare/compare-page').then((m) => ({ default: m.ComparePage })));
 const ComparisonPage = lazy(() => import('@/features/compare/comparison-page').then((m) => ({ default: m.ComparisonPage })));
+const JoinPage = lazy(() => import('@/features/team/join-page').then((m) => ({ default: m.JoinPage })));
 const AdvicePage = lazy(() => import('@/features/advice/advice-page').then((m) => ({ default: m.AdvicePage })));
 const AccountPage = lazy(() => import('@/features/account/account-page').then((m) => ({ default: m.AccountPage })));
+
+const INVITE_KEY = 'flockcast.invite';
+function rememberInvite(token: string) {
+  try {
+    sessionStorage.setItem(INVITE_KEY, token);
+  } catch {
+    // private windows may refuse storage; the link still works once signed in
+  }
+}
+function takeInvite(): string | null {
+  try {
+    const token = sessionStorage.getItem(INVITE_KEY);
+    sessionStorage.removeItem(INVITE_KEY);
+    return token;
+  } catch {
+    return null;
+  }
+}
 
 function Screen({ route }: { route: Route }) {
   switch (route.name) {
@@ -39,6 +58,8 @@ function Screen({ route }: { route: Route }) {
       return <AdvicePage id={route.id} aid={route.aid} key={route.aid} />;
     case 'account':
       return <AccountPage />;
+    case 'join':
+      return <JoinPage token={route.token} />;
     default:
       return <ProjectsPage />;
   }
@@ -68,9 +89,16 @@ export function App() {
     [client],
   );
 
-  // signing in from the log-in page lands on the projects
+  // an invite link opened while signed out survives signing up or in
   useEffect(() => {
-    if (user && (route.name === 'login' || route.name === 'signup')) navigate({ name: 'projects' }, { replace: true });
+    if (route.name === 'join' && !user) rememberInvite(route.token);
+  }, [route, user]);
+
+  // signing in from the log-in page lands on the projects, or on the invite that brought them here
+  useEffect(() => {
+    if (!user || (route.name !== 'login' && route.name !== 'signup')) return;
+    const token = takeInvite();
+    navigate(token ? { name: 'join', token } : { name: 'projects' }, { replace: true });
   }, [user, route.name]);
 
   if (route.name === 'landing') return <LandingPage />;

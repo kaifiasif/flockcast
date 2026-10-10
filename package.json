@@ -17,7 +17,8 @@
     "build:web": "cd web && npm install && npm run build",
     "dev:web": "cd web && npm run dev",
     "demo": "node --no-warnings scripts/demo.ts",
-    "stickers": "cd web && npm run stickers"
+    "stickers": "cd web && npm run stickers",
+    "plan": "node --no-warnings scripts/plan.ts"
   },
   "dependencies": {
     "@hono/node-server": "^2.1.3",

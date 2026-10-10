@@ -3,7 +3,8 @@ import type { RehearsalSettings, Rehearsals } from '../../../engine/index.ts';
 import type { Project } from '../../db/repositories/projects.repository.ts';
 import { router } from '../../http/types.ts';
 import { validate } from '../../http/validate.ts';
-import { ownProject } from '../projects/projects.routes.ts';
+import { requireFeature } from '../../core/plans.ts';
+import { checkRehearsalPlan, ownProject } from '../projects/access.ts';
 import { IdParam, InterviewInput, ListQuery, ProjectRehearsalParam, RehearsalInput } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
 
@@ -46,8 +47,11 @@ export function rehearsalsRoutes() {
     })
     .post('/projects/:id/rehearsals', validate('param', IdParam), validate('json', RehearsalInput), async (c) => {
       const ctx = c.var.ctx;
-      const project = ownProject(ctx, c.req.valid('param').id);
-      const rehearsal = await startFor(ctx.rehearsals, project, c.req.valid('json'));
+      const project = ownProject(ctx, c.req.valid('param').id, 'edit');
+      const body = c.req.valid('json');
+      checkRehearsalPlan(ctx.planOf(project), ctx.usedThisMonth(project), body, project);
+      const rehearsal = await startFor(ctx.rehearsals, project, body);
+      ctx.audit(project, 'rehearsal.started', rehearsal.id, { title: rehearsal.title });
       return c.json({ rehearsal }, 202);
     })
     .get('/projects/:id/rehearsals/:rid', validate('param', ProjectRehearsalParam), async (c) => {
@@ -59,14 +63,15 @@ export function rehearsalsRoutes() {
     .delete('/projects/:id/rehearsals/:rid', validate('param', ProjectRehearsalParam), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
+      const project = ownProject(ctx, id, 'edit');
       await engineCall(() => ctx.rehearsals.remove(id, rid));
+      ctx.audit(project, 'rehearsal.deleted', rid);
       return c.json({ ok: true });
     })
     .post('/projects/:id/rehearsals/:rid/interview', validate('param', ProjectRehearsalParam), validate('json', InterviewInput), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
+      requireFeature(ctx.planOf(ownProject(ctx, id, 'edit')), 'interviews');
       return c.json({ interview: await engineCall(() => ctx.rehearsals.interview(id, rid, c.req.valid('json'))) });
     });
 }

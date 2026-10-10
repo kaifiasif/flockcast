@@ -66,6 +66,30 @@ Ready clients, copy one into your app: `examples/http-client/flockcast-client.ts
 
 As a library: `createAdvisor({ store: sqliteAdviceStore(db), agents: pythonAgents({ llm: llmFromEnv() }), sources: searchSourcesFromEnv() })`, then `advisor.start(scope, { product, pitch })`. The table is `ADVICE_SQL`.
 
+### Teams, sign-off and webhooks
+
+These are app routes under `/api`, used by the web app with a session cookie. A stranger's project answers 404; a member whose role does not allow an action gets 403 `FORBIDDEN`; a plan that lacks a feature gets 403 `PLAN_REQUIRED`.
+
+| Endpoint | Does |
+|---|---|
+| `GET /api/projects/:id/members` | The owner and members with their roles |
+| `POST /api/projects/:id/invites` / `DELETE …/invites/:iid` | Makes a one-time invite link for `editor`, `reviewer` or `viewer` (owner only), or withdraws one |
+| `POST /api/invites/accept` | Joins with `{ token }` |
+| `PUT` / `DELETE /api/projects/:id/members/:uid` | Changes a role or removes someone (owner; anyone may leave) |
+| `POST /api/projects/:id/rehearsals/:rid/approval` | Asks for sign-off on a finished rehearsal, with an optional `note` |
+| `POST /api/projects/:id/approvals/:aid/decision` | `{ decision: "approved" \| "changes_requested", comment? }` from a reviewer or the owner, never the person who asked |
+| `GET /api/projects/:id/audit`, `/audit/csv` | The audit log |
+| `GET /api/projects/:id/usage`, `/export?format=csv\|json` | Usage this month, and the latest 200 rehearsals |
+| `GET` / `POST /api/projects/:id/webhooks`, `DELETE …/:hid`, `POST …/:hid/test` | Webhooks; the secret is shown once at creation |
+
+Each webhook delivery is a JSON POST with `{ id, event, created_at, data }` and a header
+
+```
+Flockcast-Signature: t=<unix seconds>,v1=<hex HMAC-SHA256 of "<t>.<raw body>" keyed with the secret>
+```
+
+Recompute the HMAC over the raw body, compare in constant time, and reject a `t` more than five minutes old. Failed deliveries are retried after 2 and 30 seconds.
+
 ## 2. Library
 
 ```ts

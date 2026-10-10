@@ -23,6 +23,12 @@ export type Interview = Rehearsal['interviews'][number];
 export type Outcome = NonNullable<Rehearsal['outcome']>;
 export type OutcomeInput = InferRequestType<Api['projects'][':id']['rehearsals'][':rid']['outcome']['$put']>['json'];
 export type CompareInput = InferRequestType<Api['projects'][':id']['comparisons']['$post']>['json'];
+export type Member = Ok<Api['projects'][':id']['members']['$get']>['members'][number];
+export type Invite = Ok<Api['projects'][':id']['members']['$get']>['invites'][number];
+export type Approval = NonNullable<Ok<Api['projects'][':id']['rehearsals'][':rid']['approval']['$get']>['approval']>;
+export type Webhook = Ok<Api['projects'][':id']['webhooks']['$get']>['webhooks'][number];
+export type AuditEvent = Ok<Api['projects'][':id']['audit']['$get']>['events'][number];
+export type Usage = Ok<Api['projects'][':id']['usage']['$get']>;
 export type Calibration = Ok<Api['projects'][':id']['calibration']['$get']>['calibration'];
 
 export type Advice = Ok<Api['projects'][':id']['advice'][':aid']['$get']>['advice'];

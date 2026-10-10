@@ -8,6 +8,7 @@ export interface Account {
   totp_pending: string | null;
   totp_last_step: number | null;
   created_at: string;
+  plan: string;
 }
 
 export interface SessionRow {
@@ -20,13 +21,17 @@ export interface SessionRow {
 
 /** Users and sessions. Not scoped to a user: this is what establishes who the user is. */
 export function createAccountsRepository(db: Database) {
-  const ACCOUNT = 'SELECT id, email, password_hash, totp_secret, totp_pending, totp_last_step, created_at FROM users';
+  const ACCOUNT = 'SELECT id, email, password_hash, totp_secret, totp_pending, totp_last_step, created_at, plan FROM users';
   return {
     findByEmail(email: string): Account | undefined {
       return db.get<Account>(`${ACCOUNT} WHERE email = ?`, email);
     },
     findById(id: string): Account | undefined {
       return db.get<Account>(`${ACCOUNT} WHERE id = ?`, id);
+    },
+    /** For the operator's `npm run plan` command; plans are not changed over HTTP. */
+    setPlan(email: string, plan: string): boolean {
+      return db.run('UPDATE users SET plan = ? WHERE email = ?', plan, email.trim().toLowerCase()).changes === 1;
     },
     hasAccounts(): boolean {
       return Boolean(db.get('SELECT 1 FROM users WHERE email IS NOT NULL LIMIT 1'));

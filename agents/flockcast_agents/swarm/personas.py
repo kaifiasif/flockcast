@@ -54,9 +54,17 @@ def validate_personas(o, n: int) -> list:
     return out
 
 
+# a model writes about 25 detailed people per answer before it runs out of room
+BATCH = 25
+
+
 def generate_personas(llm, audience, examples, handle, platform, count, rng) -> list:
     if not llm:
         return offline_personas(audience, count, rng)
+    if count > BATCH:
+        crowd = generate_personas(llm, audience, examples, handle, platform, BATCH, rng)
+        crowd += generate_personas(llm, audience, examples, handle, platform, count - BATCH, rng)
+        return [{**p, "id": i + 1} for i, p in enumerate(crowd)]
     sample = "\n".join("- " + re.sub(r"\s+", " ", a["text"])[:240] for a in examples[:EXAMPLES_SHOWN]) or "- (no past posts given)"
     return llm.json(
         system="You design realistic, varied social media users for an audience simulation. Reply with JSON only.",
@@ -128,11 +136,11 @@ def tough_crowd(personas, count):
     return crowd
 
 
-def cast_of(cast, limit=30):
+def cast_of(cast, limit=50):
     """A crowd handed back from an earlier rehearsal, so drafts can be compared on the same people.
     Checked field by field, since it round-trips through the caller."""
     if not isinstance(cast, list) or not 2 <= len(cast) <= limit:
-        raise ValueError("cast must list 2 to 30 people")
+        raise ValueError(f"cast must list 2 to {limit} people")
     out = []
     for i, p in enumerate(cast):
         if not isinstance(p, dict) or not trimmed(p.get("name"), 60):

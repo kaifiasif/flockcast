@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { PLATFORM_IDS } from '../../../engine/index.ts';
+import { PLATFORM_IDS, REHEARSAL_MODES } from '../../../engine/index.ts';
 
 export const IdParam = z.object({ id: z.uuid() });
 export const ProjectRehearsalParam = z.object({ id: z.uuid(), rid: z.uuid() });
@@ -31,6 +31,10 @@ export const RehearsalInput = z.object({
   platform: z.enum(PLATFORM_IDS).optional(),
   personas: z.number().int().min(2).max(30).optional(),
   rounds: z.number().int().min(1).max(40).optional(),
+  /** Seat a harsh critic in the crowd (default on). */
+  critic: z.boolean().optional(),
+  /** 'quick' is one model call for a fast first read; 'crowd' (default) runs the full simulation. */
+  mode: z.enum(REHEARSAL_MODES).optional(),
   force: z.boolean().optional(),
 });
 

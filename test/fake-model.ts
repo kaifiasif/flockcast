@@ -94,8 +94,38 @@ function advisorAnswer(prompt: string): unknown {
   return null;
 }
 
+/** The studio crew: AI-sounding check, fixes, reply prep and the one-call quick read. */
+function studioAnswer(prompt: string): unknown {
+  if (/seen thousands of AI-written posts/.test(prompt)) {
+    const lines = [...prompt.matchAll(/^(\d+)\. (.+)$/gm)];
+    const hit = lines.find((m) => /fluent|game.?changer|delve|not just/i.test(m[2])) ?? lines[0];
+    return { flags: hit ? [{ sentence: Number(hit[1]), why: 'A tidy general claim with no example reads like a template.' }] : [] };
+  }
+  if (/These sentences drew pushback/.test(prompt)) {
+    const items = [...prompt.matchAll(/^(\d+)\. "(.+)"$/gm)];
+    return { fixes: items.map((m) => ({ sentence: Number(m[1]), why: 'Readers want to know where the claim comes from before they share it.', rewrite: /\d+%/.test(m[2]) ? m[2].replace(/(\d+%)/, '$1 [source]') : `${m[2].replace(/[.!?]$/, '')}, for example [source].` })) };
+  }
+  if (/answer the first replies/.test(prompt)) {
+    const block = prompt.split('Replies to answer:')[1] ?? '';
+    const items = [...block.matchAll(/^(\d+)\. ([^:]+):/gm)];
+    return { answers: items.map((m) => ({ reply: Number(m[1]), answer: `Fair point, ${m[2].split(' ')[0]}. Here is where it comes from: [link]. I should have put it in the post.` })) };
+  }
+  const quick = prompt.match(/Imagine (\d+) distinct readers/);
+  if (quick) {
+    const reactions = ['reply', 'like', 'nothing', 'reply', 'repost', 'like'];
+    return {
+      readers: Array.from({ length: Number(quick[1]) }, (_, i) => {
+        const p = PEOPLE[i % PEOPLE.length];
+        const reaction = reactions[i % reactions.length];
+        return { name: p.name, segment: p.segment, bio: p.bio, stance: p.stance, reaction, text: reaction === 'reply' ? LINES[p.stance][i % 3] : '' };
+      }),
+    };
+  }
+  return null;
+}
+
 export function answer(prompt: string): unknown {
-  const advice = advisorAnswer(prompt);
+  const advice = advisorAnswer(prompt) ?? studioAnswer(prompt);
   if (advice) return advice;
   const count = prompt.match(/Create (\d+) distinct people/);
   if (count) {

@@ -26,3 +26,5 @@ export type AdviceResult = NonNullable<Advice['result']>;
 export type AdviceInput = InferRequestType<Api['projects'][':id']['advice']['$post']>['json'];
 export type AdvisorInfo = AppConfig['advisor'];
 export type AdvisorAgent = keyof AdvisorInfo['agents'];
+export type StudioInfo = AppConfig['studio'];
+export type StudioAgent = keyof StudioInfo['agents'];

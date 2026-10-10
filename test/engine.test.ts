@@ -75,7 +75,7 @@ async function fakeModel({ rateLimitFirst = false, badJsonOnce = false } = {}) {
       }
     } else if (/## Likely reception/.test(prompt)) content = JSON.stringify({ markdown: '## Likely reception\nMixed.\n\n## Before you post\n- Cite the forty percent.' });
     else if (/Someone asks you:/.test(prompt)) content = JSON.stringify({ answer: 'I wanted a source before sharing it.' });
-    else content = '{}';
+    else content = JSON.stringify(answer(prompt)); // the studio crew's steps
     return { content };
   });
   after(() => server.close());
@@ -119,8 +119,14 @@ test('model engine: one call per round, retries 429 and bad JSON, counts calls p
   const x = (await run('p1', POST, { rounds: 3, personas: 3 })).result!;
   assert.equal(x.engine, 'swarm');
   assert.equal(x.model, 'test-model');
-  // personas (1 + 429 retry) + 3 rounds (+1 bad JSON retry) + report
-  assert.equal(x.model_calls, 7);
+  // personas (1 + 429 retry) + 3 rounds (+1 bad JSON retry) + report + AI check, fixes and reply prep
+  assert.equal(x.model_calls, 10);
+  assert.equal(x.studio_errors, undefined);
+  assert.equal(x.ai_check!.method, 'model');
+  assert.match(x.fixes![0].sentence, /forty percent/);
+  assert.ok(x.fixes![0].rewrite);
+  assert.equal(x.reply_prep![0].from, 'Sam Skeptic');
+  assert.match(x.reply_prep![0].answer, /\[link\]/);
   assert.ok(fake.calls.every((c) => c.auth === 'Bearer test-key' && c.json === 'json_object' && c.url === '/v1/chat/completions'));
   assert.equal(x.counts.replies, 1);
   assert.equal(x.counts.likes, 1);
@@ -129,7 +135,7 @@ test('model engine: one call per round, retries 429 and bad JSON, counts calls p
 
   // a second rehearsal on the same client counts only its own calls
   const y = (await run('p1', `${POST} Second take.`, { rounds: 1, personas: 3 })).result!;
-  assert.equal(y.model_calls, 3);
+  assert.equal(y.model_calls, 6);
 
   const rid = r.list('p1')[1].id;
   const answer = await r.interview('p1', rid, { agent_id: 1, prompt: 'Why did you reply?' });
@@ -137,6 +143,29 @@ test('model engine: one call per round, retries 429 and bad JSON, counts calls p
   assert.match(fake.calls.at(-1)!.prompt, /Sam Skeptic|data person/i);
   assert.equal(r.get('p1', rid).interviews.length, 1);
   await assert.rejects(r.interview('p1', rid, { agent_id: 42, prompt: 'Hi' }), { status: 404 });
+});
+
+test('studio crew: a harsh critic sits in every crowd, quick mode reads in one call, platform checks run offline', async () => {
+  const offline = harness(swarmEngine());
+  const o = (await offline.run('p1', `${POST} #ai #writing #tips`, { personas: 8, rounds: 2 })).result!;
+  assert.equal(o.mode, 'crowd');
+  assert.ok(o.critic, 'the critic seat is filled by default');
+  assert.match(o.personas.find((p) => p.id === o.critic)!.name, /critic/i);
+  assert.ok(o.checks!.some((c) => c.id === 'hashtags'), 'three hashtags on X is flagged');
+  assert.equal(o.ai_check!.method, 'rules');
+  assert.deepEqual(o.reply_prep, [], 'reply prep needs a model');
+
+  const noCritic = (await offline.run('p1', POST, { personas: 8, rounds: 2, critic: false })).result!;
+  assert.equal(noCritic.critic, null);
+
+  const { engine } = await modelEngine();
+  const { run } = harness(engine);
+  const q = (await run('p1', POST, { personas: 6, mode: 'quick' })).result!;
+  assert.equal(q.mode, 'quick');
+  assert.equal(q.agents, 6);
+  // one call for the whole crowd, then the report and the three studio steps
+  assert.equal(q.model_calls, 5);
+  assert.ok(q.replies.length >= 1);
 });
 
 test('a model that fails during a question answers 424, not a server error', async () => {

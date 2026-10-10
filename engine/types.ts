@@ -26,7 +26,14 @@ export interface RehearsalSettings {
   handle: string;
   /** A platform id from PLATFORMS. */
   platform: string;
+  /** Seat one harsh critic in the crowd, so a friendly crowd cannot hide a weak claim. */
+  critic: boolean;
+  /** 'crowd' runs the full feed simulation; 'quick' is one model call for a fast first read. */
+  mode: RehearsalMode;
 }
+
+export const REHEARSAL_MODES = ['crowd', 'quick'] as const;
+export type RehearsalMode = (typeof REHEARSAL_MODES)[number];
 
 export interface Persona {
   id: number;
@@ -75,6 +82,44 @@ export interface RehearsalResult {
   pushback_share: number;
   report: { markdown: string } | null;
   report_error?: string;
+  /** The studio crew's notes. Missing on rehearsals made before they existed and on MiroFish runs. */
+  mode?: RehearsalMode;
+  /** The harsh critic's persona id, when one was seated. */
+  critic?: number | null;
+  crowd?: { friendliness: number | null; stances: Record<Stance, number>; warning: string | null };
+  checks?: PlatformCheck[];
+  ai_check?: { method: 'rules' | 'model'; score: number; flags: { index: number; sentence: string; why: string; by: 'rules' | 'model' }[] };
+  fixes?: Fix[];
+  reply_prep?: ReplyPrep[];
+  studio_errors?: string[];
+}
+
+/** A platform rule the post breaks or brushes against. */
+export interface PlatformCheck {
+  id: string;
+  level: 'warn' | 'tip';
+  title: string;
+  detail: string;
+  excerpt?: string;
+}
+
+/** A sentence worth fixing, why, who objected, and a rewrite when a model is set. */
+export interface Fix {
+  sentence: string;
+  why: string;
+  who: string[];
+  said: string[];
+  suggestion: string;
+  rewrite: string | null;
+}
+
+/** A likely first reply and a drafted answer to it. */
+export interface ReplyPrep {
+  from: string;
+  agent_id: number;
+  reply: string;
+  stance: 'pushback' | 'other';
+  answer: string;
 }
 
 export interface Interview {

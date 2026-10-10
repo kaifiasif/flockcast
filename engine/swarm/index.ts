@@ -28,7 +28,7 @@ export function swarmEngine({ agents = pythonAgents() }: { agents?: Agents } = {
 
     async run({ input, settings, onStage }) {
       if (!input.posts.length || input.posts.some((p) => !p.trim())) throw new Error('Nothing to rehearse: the post is empty.');
-      return agents.run<{ result: RehearsalResult; state: unknown }>('rehearse', { input, settings, platform: platformOf(settings.platform) }, (status, progress) =>
+      return agents.run<{ result: RehearsalResult; state: unknown }>('rehearse', { input, settings: { ...settings, studio: true }, platform: platformOf(settings.platform) }, (status, progress) =>
         onStage(status as Parameters<typeof onStage>[0], progress),
       );
     },

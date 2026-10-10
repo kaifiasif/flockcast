@@ -12,6 +12,18 @@ It comes three ways from one codebase:
 
 Simulated audiences are a rehearsal, not a forecast. The app says so wherever it shows results.
 
+## Studio crew
+
+After the crowd reads your post, a crew of small agents helps you fix it. Each runs without a model too, more simply.
+
+- **Sable the Sniffer** flags sentences that read as AI-written and says what gives each away.
+- **Editor Ember** explains why readers pushed back on a sentence, quotes who said what, and (with a model) writes a rewrite. Missing sources become `[source]`; it never invents facts.
+- **Rook the Contrarian** sits in every crowd as a harsh critic (turn it off with `"critic": false`). If the crowd still agrees with everything, the results warn that a friendly crowd proves little.
+- **Echo the Herald** picks the replies you are likely to get first and drafts your answers (model only).
+- **Wren** gives a quick read in one model call (`"mode": "quick"`) when you do not need the full feed simulation.
+
+Every rehearsal also checks the platform's rules: length, links, hashtags, the LinkedIn fold, engagement bait, all caps. The compose screen offers hard-to-reach crowds (enterprise buyers, investors, developers, journalists, Gen Z, regulated industries) as starting points.
+
 ## Launch advisor
 
 Each project also has a **Launch advisor** for the product you are about to launch. Describe it in a few sentences and a crew of five agents does the rest, written for someone who has never priced or launched anything:

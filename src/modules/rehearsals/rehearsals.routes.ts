@@ -15,6 +15,8 @@ export function settingsFor(project: Project, body: Partial<z.infer<typeof Rehea
     audience: body.audience?.trim() || project.audience,
     personas: body.personas ?? project.personas,
     rounds: body.rounds ?? project.rounds,
+    critic: body.critic,
+    mode: body.mode,
   };
 }
 

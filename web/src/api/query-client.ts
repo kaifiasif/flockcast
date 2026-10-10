@@ -21,6 +21,8 @@ export const queryKeys = {
   keys: (id: string) => ['projects', id, 'keys'] as const,
   rehearsals: (id: string) => ['projects', id, 'rehearsals'] as const,
   rehearsal: (id: string, rid: string) => ['projects', id, 'rehearsals', rid] as const,
+  comparison: (id: string, gid: string) => ['projects', id, 'comparisons', gid] as const,
+  calibration: (id: string) => ['projects', id, 'calibration'] as const,
   advice: (id: string) => ['projects', id, 'advice'] as const,
   adviceOne: (id: string, aid: string) => ['projects', id, 'advice', aid] as const,
 };

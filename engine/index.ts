@@ -9,6 +9,7 @@
  *   const r = await rehearsals.start(projectId, { ref: { text: 'My post' }, settings: { platform: 'linkedin' } });
  */
 export { createRehearsals, RehearsalError, DEFAULT_LIMITS, DEFAULT_SETTINGS } from './core.ts';
+export { calibrate, mixMatch, type Calibration } from './calibration.ts';
 export type { Rehearsals, StartRequest, Limits, CreateRehearsalsOptions, RehearsalErrorCode } from './core.ts';
 export { swarmEngine, DEFAULT_AUDIENCE, draftOf } from './swarm/index.ts';
 export { mirofishEngine } from './mirofish/engine.ts';

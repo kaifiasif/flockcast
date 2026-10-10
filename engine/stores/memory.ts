@@ -23,8 +23,8 @@ export function memoryStore(): Store {
       const r = rows.filter((x) => x.scope === scope && x.subject === subject).sort(newestFirst)[0];
       return r && clone(r);
     },
-    list(scope, { subject, limit = 50 } = {}) {
-      return rows.filter((x) => x.scope === scope && (!subject || x.subject === subject)).sort(newestFirst).slice(0, limit).map(clone);
+    list(scope, { subject, group, limit = 50 } = {}) {
+      return rows.filter((x) => x.scope === scope && (!subject || x.subject === subject) && (!group || x.group_id === group)).sort(newestFirst).slice(0, limit).map(clone);
     },
     countSince(scope, subject, sinceIso) {
       return rows.filter((x) => x.scope === scope && x.subject === subject && x.created_at > sinceIso).length;

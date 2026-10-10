@@ -10,7 +10,7 @@ from ..studio.quick import quick_read
 from ..studio.replies import reply_prep
 from ..studio.slop import ai_check
 from ..summarize import summarize
-from .personas import DEFAULT_AUDIENCE, generate_personas, tough_crowd
+from .personas import CRITIC, DEFAULT_AUDIENCE, cast_of, generate_personas, tough_crowd
 from .report import interview_persona, write_report
 from .simulate import World, rng_from, simulate
 
@@ -78,13 +78,20 @@ def rehearse(llm, payload, on_stage):
         personas, feed_posts, actions, memory = quick_read(llm, draft, settings, platform, (settings.get("audience") or DEFAULT_AUDIENCE).strip(), critic)
         on_stage("running", 60)
         rounds = 1
+    elif inp.get("cast") is not None:
+        # comparing drafts: the same people, and the same luck, for every draft
+        try:
+            personas = cast_of(inp["cast"])
+        except ValueError as e:
+            raise JobError(f"The crowd to reuse is not valid: {e}.", 400) from None
+        rng = rng_from(f"cast|{'|'.join(p['name'] for p in personas)}|{platform['id']}")
     else:
         rng = rng_from(f"{draft}|{settings.get('audience') or ''}|{platform['id']}|{settings['personas']}")
         n = settings["personas"]
         personas = generate_personas(llm, settings.get("audience"), inp.get("examples") or [], settings["handle"], platform, n - 1 if critic else n, rng)
         if critic:
             personas = tough_crowd(personas, n)
-
+    if not quick:
         on_stage("running", 20)
         world = World(settings["handle"], draft, personas, platform)
         rounds = simulate(llm, world, settings["rounds"], rng, on_round=lambda r, n: on_stage("running", 20 + js_round(65 * r / n)))
@@ -112,7 +119,8 @@ def rehearse(llm, payload, on_stage):
         result["report_error"] = report_error
     if studio:
         result["mode"] = "quick" if quick else "crowd"
-        result["critic"] = personas[-1]["id"] if critic and not quick else None
+        seat = next((p["id"] for p in personas if p["segment"] == CRITIC["segment"]), None)
+        result["critic"] = seat if not quick else None
         result["crowd"] = crowd_mood(summary, personas)
         result.update(_studio(llm, posts, draft, summary, settings, platform, on_stage))
     result["model_calls"] = llm.calls if llm else 0

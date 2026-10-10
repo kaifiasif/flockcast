@@ -33,7 +33,7 @@ export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer
 
 /** Callers filter by their own subject; the text source stores it as "ref:<subject>". */
 export function listFor(rehearsals: Rehearsals, projectId: string, query: z.infer<typeof ListQuery>) {
-  return rehearsals.list(projectId, { limit: query.limit, subject: query.subject ? `ref:${query.subject}` : undefined });
+  return rehearsals.list(projectId, { limit: query.limit, group: query.group, subject: query.subject ? `ref:${query.subject}` : undefined });
 }
 
 /** Rehearsals for the signed-in user's projects. The project is checked first; the engine is scoped by its id. */

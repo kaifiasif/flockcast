@@ -47,9 +47,14 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
                   </>
                 }
                 actions={
-                  <Button asChild>
-                    <a href={hrefOf({ name: 'compose', id })}>Rehearse a post</a>
-                  </Button>
+                  <>
+                    <Button variant="outline" asChild>
+                      <a href={hrefOf({ name: 'compare', id })}>Compare drafts</a>
+                    </Button>
+                    <Button asChild>
+                      <a href={hrefOf({ name: 'compose', id })}>Rehearse a post</a>
+                    </Button>
+                  </>
                 }
               />
               <nav aria-label="Project sections" className="-mx-1 flex gap-1 overflow-x-auto px-1">

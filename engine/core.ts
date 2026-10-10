@@ -7,8 +7,9 @@
  * only ever read or changed through its own scope, so one tenant cannot reach another's by id.
  */
 import { createHash, randomUUID } from 'node:crypto';
+import { calibrate } from './calibration.ts';
 import { platformOf } from './platforms.ts';
-import type { Engine, Interview, Rehearsal, RehearsalSettings, Source, Store, StoredRehearsal } from './types.ts';
+import type { Engine, Interview, Outcome, Rehearsal, RehearsalSettings, Source, Store, StoredRehearsal } from './types.ts';
 import { ACTIVE_STATUSES } from './types.ts';
 
 export type RehearsalErrorCode = 'NOT_FOUND' | 'INVALID' | 'GATE_CLOSED' | 'NOT_READY' | 'NO_INTERVIEWS' | 'RATE_LIMITED' | 'MODEL_FAILED' | 'UNKNOWN_SOURCE';
@@ -49,6 +50,16 @@ export interface StartRequest {
   force?: boolean;
 }
 
+export interface CompareRequest {
+  source?: string;
+  /** Two or three drafts, each what the source needs (for "text", `{ text }`). */
+  refs: unknown[];
+  settings?: Partial<RehearsalSettings>;
+}
+
+const VARIANTS = ['A', 'B', 'C'] as const;
+const count = (v: unknown, name: string) => clampInt(v ?? 0, 0, 1_000_000_000, name);
+
 export interface CreateRehearsalsOptions {
   store: Store;
   engine: Engine;
@@ -79,6 +90,9 @@ const toPublic = (r: StoredRehearsal): Rehearsal => ({
   error: r.error,
   created_at: r.created_at,
   finished_at: r.finished_at,
+  group_id: r.group_id ?? null,
+  variant: r.variant ?? null,
+  outcome: r.outcome ?? null,
 });
 
 function clampInt(v: unknown, lo: number, hi: number, name: string): number {
@@ -110,6 +124,51 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
     };
   }
 
+  function sourceOf(name = 'text'): Source {
+    const source = sources.get(name);
+    if (!source) throw new RehearsalError(400, 'UNKNOWN_SOURCE', `Unknown source "${name}". Available: ${[...sources.keys()].join(', ')}.`);
+    return source;
+  }
+
+  async function loadText(source: Source, scope: string, ref: unknown) {
+    const loaded = await source.load(scope, ref);
+    if (loaded.gate && !loaded.gate.open) throw new RehearsalError(409, 'GATE_CLOSED', loaded.gate.reason ?? 'This cannot be rehearsed yet.');
+    const posts = loaded.input.posts.map((p) => String(p).trim());
+    if (!posts.length || posts.some((p) => !p)) throw new RehearsalError(400, 'INVALID', 'There is no text to rehearse.');
+    if (posts.join('').length > limits.maxTextChars) throw new RehearsalError(400, 'INVALID', `Keep the text under ${limits.maxTextChars} characters.`);
+    return { loaded, posts };
+  }
+
+  function checkDailyCap(scope: string, subject: string) {
+    const dayAgo = new Date(now().getTime() - 86_400_000).toISOString();
+    const recent = store.countSince(scope, subject, dayAgo);
+    if (recent >= limits.rehearsalsPerSubjectPerDay) throw new RehearsalError(429, 'RATE_LIMITED', `This has been rehearsed ${recent} times in the last day. Try again tomorrow.`);
+  }
+
+  function newRow(scope: string, source: string, loaded: { subject: string; title: string }, posts: string[], settings: RehearsalSettings, textHash: string): StoredRehearsal {
+    return {
+      id: randomUUID(),
+      scope,
+      subject: loaded.subject,
+      source,
+      title: loaded.title.slice(0, 120),
+      status: 'queued',
+      progress: 0,
+      settings,
+      posts,
+      result: null,
+      state: null,
+      interviews: [],
+      error: null,
+      text_hash: textHash,
+      created_at: now().toISOString(),
+      finished_at: null,
+      group_id: null,
+      variant: null,
+      outcome: null,
+    };
+  }
+
   function find(scope: string, id: string): StoredRehearsal {
     const row = store.get(scope, id);
     if (!row) throw new RehearsalError(404, 'NOT_FOUND', 'Rehearsal not found.');
@@ -138,47 +197,79 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
      * when the text has not changed (unless forced). Returns at once; the work runs in the background.
      */
     async start(scope: string, req: StartRequest = {}): Promise<Rehearsal> {
-      const source = sources.get(req.source ?? 'text');
-      if (!source) throw new RehearsalError(400, 'UNKNOWN_SOURCE', `Unknown source "${req.source}". Available: ${[...sources.keys()].join(', ')}.`);
+      const source = sourceOf(req.source);
       const settings = settingsOf(req.settings);
-      const loaded = await source.load(scope, req.ref);
-      if (loaded.gate && !loaded.gate.open) throw new RehearsalError(409, 'GATE_CLOSED', loaded.gate.reason ?? 'This cannot be rehearsed yet.');
-      const posts = loaded.input.posts.map((p) => String(p).trim());
-      if (!posts.length || posts.some((p) => !p)) throw new RehearsalError(400, 'INVALID', 'There is no text to rehearse.');
-      if (posts.join('').length > limits.maxTextChars) throw new RehearsalError(400, 'INVALID', `Keep the text under ${limits.maxTextChars} characters.`);
+      const { loaded, posts } = await loadText(source, scope, req.ref);
 
       const textHash = sha256(JSON.stringify([posts, settings]));
       const prev = store.latest(scope, loaded.subject);
       if (prev && ACTIVE_STATUSES.includes(prev.status)) return toPublic(prev);
       if (prev && prev.status === 'done' && prev.text_hash === textHash && !req.force) return toPublic(prev);
+      checkDailyCap(scope, loaded.subject);
 
-      const dayAgo = new Date(now().getTime() - 86_400_000).toISOString();
-      const recent = store.countSince(scope, loaded.subject, dayAgo);
-      if (recent >= limits.rehearsalsPerSubjectPerDay) {
-        throw new RehearsalError(429, 'RATE_LIMITED', `This has been rehearsed ${recent} times in the last day. Try again tomorrow.`);
-      }
-
-      const row: StoredRehearsal = {
-        id: randomUUID(),
-        scope,
-        subject: loaded.subject,
-        source: source.name,
-        title: loaded.title.slice(0, 120),
-        status: 'queued',
-        progress: 0,
-        settings,
-        posts,
-        result: null,
-        state: null,
-        interviews: [],
-        error: null,
-        text_hash: textHash,
-        created_at: now().toISOString(),
-        finished_at: null,
-      };
+      const row = newRow(scope, source.name, loaded, posts, settings, textHash);
       store.insert(row);
       background(() => execute(row, { ...loaded.input, posts }));
       return toPublic(row);
+    },
+
+    /**
+     * Rehearses two or three drafts on one crowd: the first draft casts it, and the others are read by
+     * the same people with the same luck, so differences come from the text. Always the full crowd.
+     */
+    async compare(scope: string, req: CompareRequest): Promise<Rehearsal[]> {
+      if (!Array.isArray(req.refs) || req.refs.length < 2 || req.refs.length > VARIANTS.length) throw new RehearsalError(400, 'INVALID', 'Compare two or three drafts.');
+      const source = sourceOf(req.source);
+      const settings = settingsOf({ ...req.settings, mode: 'crowd' });
+      const drafts: Awaited<ReturnType<typeof loadText>>[] = [];
+      for (const ref of req.refs) drafts.push(await loadText(source, scope, ref));
+      if (new Set(drafts.map((d) => JSON.stringify(d.posts))).size < drafts.length) throw new RehearsalError(400, 'INVALID', 'Each draft must be different.');
+      for (const d of drafts) checkDailyCap(scope, d.loaded.subject);
+
+      const group = randomUUID();
+      const rows = drafts.map((d, i) => ({ ...newRow(scope, source.name, d.loaded, d.posts, settings, sha256(JSON.stringify([d.posts, settings, group]))), group_id: group, variant: VARIANTS[i] }));
+      for (const row of rows) store.insert(row);
+      background(async () => {
+        await execute(rows[0], { ...drafts[0].loaded.input, posts: drafts[0].posts });
+        const first = store.get(scope, rows[0].id);
+        const cast = (first?.state as { personas?: unknown[] } | null)?.personas;
+        for (const [i, row] of rows.entries()) {
+          if (i === 0) continue;
+          if (first?.status !== 'done') {
+            store.update(scope, row.id, { status: 'failed', error: 'Draft A did not finish, so there was no crowd to reuse. Run the comparison again.', finished_at: now().toISOString() });
+            continue;
+          }
+          await execute(row, { ...drafts[i].loaded.input, posts: drafts[i].posts, cast });
+        }
+      });
+      return rows.map(toPublic);
+    },
+
+    /** The author's real numbers after posting. Replaces any earlier entry. */
+    recordOutcome(scope: string, id: string, body: Partial<Omit<Outcome, 'recorded_at'>>): Rehearsal {
+      const row = find(scope, id);
+      if (row.status !== 'done') throw new RehearsalError(409, 'NOT_READY', 'Record real results once the rehearsal has finished.');
+      const outcome: Outcome = {
+        likes: count(body.likes, 'likes'),
+        reposts: count(body.reposts, 'reposts'),
+        replies: count(body.replies, 'replies'),
+        quotes: count(body.quotes, 'quotes'),
+        impressions: body.impressions == null ? null : count(body.impressions, 'impressions'),
+        note: String(body.note ?? '').trim().slice(0, 500),
+        recorded_at: now().toISOString(),
+      };
+      store.update(scope, id, { outcome });
+      return toPublic({ ...row, outcome });
+    },
+
+    clearOutcome(scope: string, id: string): void {
+      find(scope, id);
+      store.update(scope, id, { outcome: null });
+    },
+
+    /** How close this scope's rehearsals came to the real numbers entered for them. */
+    calibration(scope: string) {
+      return calibrate(store.list(scope, { limit: 200 }).filter((r) => r.outcome).map(toPublic));
     },
 
     get(scope: string, id: string): Rehearsal {
@@ -190,8 +281,8 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
       return row ? toPublic(row) : null;
     },
 
-    list(scope: string, opts: { subject?: string; limit?: number } = {}): Rehearsal[] {
-      return store.list(scope, { subject: opts.subject, limit: Math.min(Math.max(opts.limit ?? 50, 1), 200) }).map(toPublic);
+    list(scope: string, opts: { subject?: string; group?: string; limit?: number } = {}): Rehearsal[] {
+      return store.list(scope, { subject: opts.subject, group: opts.group, limit: Math.min(Math.max(opts.limit ?? 50, 1), 200) }).map(toPublic);
     },
 
     remove(scope: string, id: string): void {

@@ -15,6 +15,8 @@ export interface RehearsalInput {
   sentences?: { id: string | null; text: string }[];
   /** Past posts by the same author. Personas are modelled on who would read these. */
   examples?: { text: string; published_at?: string | null }[];
+  /** People from an earlier rehearsal, so drafts are compared on the same crowd. Set by compare(). */
+  cast?: unknown[];
 }
 
 export interface RehearsalSettings {
@@ -146,6 +148,23 @@ export interface Rehearsal {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  /** Rehearsals started together by compare() share a group and are labelled A, B, C. */
+  group_id: string | null;
+  variant: string | null;
+  /** What really happened after posting, entered by the author, for checking the rehearsal. */
+  outcome: Outcome | null;
+}
+
+/** Real numbers from the published post. */
+export interface Outcome {
+  likes: number;
+  reposts: number;
+  replies: number;
+  quotes: number;
+  /** Views or impressions, when the platform shows them. */
+  impressions: number | null;
+  note: string;
+  recorded_at: string;
 }
 
 export type OnStage = (status: RehearsalStatus, progress: number) => void;
@@ -190,7 +209,7 @@ export interface Store {
   update(scope: string, id: string, patch: Partial<StoredRehearsal>): void;
   get(scope: string, id: string): StoredRehearsal | undefined;
   latest(scope: string, subject: string): StoredRehearsal | undefined;
-  list(scope: string, opts?: { subject?: string; limit?: number }): StoredRehearsal[];
+  list(scope: string, opts?: { subject?: string; group?: string; limit?: number }): StoredRehearsal[];
   countSince(scope: string, subject: string, sinceIso: string): number;
   remove(scope: string, id: string): boolean;
   /** Marks rehearsals left mid-run by a restart as failed. Returns how many. */

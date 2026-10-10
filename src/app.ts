@@ -15,13 +15,14 @@ import { adviceRoutes } from './modules/advice/advice.routes.ts';
 import { authRoutes } from './modules/auth/auth.routes.ts';
 import { projectsRoutes } from './modules/projects/projects.routes.ts';
 import { apiV1Routes } from './modules/rehearsals/api-v1.routes.ts';
+import { comparisonsRoutes } from './modules/rehearsals/comparisons.routes.ts';
 import { rehearsalsRoutes } from './modules/rehearsals/rehearsals.routes.ts';
 import { healthRoutes, systemRoutes } from './modules/system/system.routes.ts';
 
 const ROOT = join(import.meta.dirname, '..');
 
 /** Starting a rehearsal, asking a follower or asking for launch advice spends model tokens. */
-const COSTLY = /^\/api\/projects\/[^/]+\/(rehearsals(\/[^/]+\/interview)?|advice)$/;
+const COSTLY = /^\/api\/projects\/[^/]+\/(rehearsals(\/[^/]+\/interview)?|comparisons|advice)$/;
 const isCostly = (method: string, path: string) => method === 'POST' && COSTLY.test(path);
 /** The largest body any endpoint needs: a project with 25 past posts. */
 const MAX_BODY = 64 * 1024;
@@ -48,6 +49,7 @@ export function createApp(app: AppServices, options: { publicDir?: string } = {}
     .route('/', systemRoutes(app))
     .route('/', projectsRoutes())
     .route('/', rehearsalsRoutes())
+    .route('/', comparisonsRoutes())
     .route('/', adviceRoutes())
     .all('*', () => {
       throw new AppError(404, ErrorCode.NOT_FOUND, 'No such endpoint.');

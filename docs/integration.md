@@ -38,6 +38,10 @@ curl -X POST $FLOCKCAST/api/v1/rehearsals/<id>/interview \
 |---|---|
 | `GET /api/v1/project` | The project this key belongs to |
 | `POST /api/v1/rehearsals` | Starts a rehearsal. Body: `text` (required; `---` lines split a thread), `subject`, `title`, `platform`, `personas`, `rounds`, `audience`, `critic` (default true: seat a harsh critic), `mode` (`crowd` or `quick`), `force`. Answers 202 with the rehearsal |
+| `POST /api/v1/comparisons` | Compares two or three drafts on one crowd. Body: `drafts` (`[{ text, title? }]`), `platform`, `personas`, `rounds`, `audience`, `critic`. Answers 202 with `group_id` and one rehearsal per draft, labelled `variant` A, B, C |
+| `GET /api/v1/comparisons/:id` | The drafts of one comparison, A first |
+| `PUT /api/v1/rehearsals/:id/outcome` | Records what really happened after posting: `likes`, `reposts`, `replies`, `quotes`, `impressions` (optional), `note` |
+| `GET /api/v1/calibration` | How close this project's rehearsals came to the real numbers: average reaction-mix match, per-post detail, and how often the crowd's pick won |
 | `GET /api/v1/rehearsals?subject=draft-42&limit=20` | Recent rehearsals, newest first, optionally for one subject |
 | `GET /api/v1/rehearsals/:id` | One rehearsal, with `status`, `progress` (0 to 100) and, when done, `result` |
 | `POST /api/v1/rehearsals/:id/interview` | Asks follower `agent_id` a question. 409 when the rehearsal ran offline |

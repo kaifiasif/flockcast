@@ -10,6 +10,8 @@ export type Route =
   | { name: 'project'; id: string; tab: ProjectTab }
   | { name: 'compose'; id: string; from?: string }
   | { name: 'rehearsal'; id: string; rid: string }
+  | { name: 'compare'; id: string }
+  | { name: 'comparison'; id: string; gid: string }
   | { name: 'advice'; id: string; aid: string }
   | { name: 'account' };
 
@@ -20,6 +22,8 @@ const PATTERNS: [RegExp, (m: RegExpMatchArray) => Route][] = [
   [/^\/projects$/, () => ({ name: 'projects' })],
   [new RegExp(`^/projects/${ID}/new$`), (m) => ({ name: 'compose', id: m[1] })],
   [new RegExp(`^/projects/${ID}/new/${ID}$`), (m) => ({ name: 'compose', id: m[1], from: m[2] })],
+  [new RegExp(`^/projects/${ID}/compare$`), (m) => ({ name: 'compare', id: m[1] })],
+  [new RegExp(`^/projects/${ID}/compare/${ID}$`), (m) => ({ name: 'comparison', id: m[1], gid: m[2] })],
   [new RegExp(`^/projects/${ID}/rehearsals/${ID}$`), (m) => ({ name: 'rehearsal', id: m[1], rid: m[2] })],
   [new RegExp(`^/projects/${ID}/advice/${ID}$`), (m) => ({ name: 'advice', id: m[1], aid: m[2] })],
   [new RegExp(`^/projects/${ID}/(advisor|setup|keys)$`), (m) => ({ name: 'project', id: m[1], tab: m[2] as ProjectTab })],
@@ -48,6 +52,10 @@ export function pathOf(route: Route): string {
       return `/projects/${route.id}/rehearsals/${route.rid}`;
     case 'advice':
       return `/projects/${route.id}/advice/${route.aid}`;
+    case 'compare':
+      return `/projects/${route.id}/compare`;
+    case 'comparison':
+      return `/projects/${route.id}/compare/${route.gid}`;
     default:
       return `/${route.name}`;
   }

@@ -38,6 +38,32 @@ export const RehearsalInput = z.object({
   force: z.boolean().optional(),
 });
 
+const Draft = z.object({
+  text: z.string().trim().min(1, 'Each draft needs text.').max(10_000),
+  title: z.string().trim().max(120).optional(),
+});
+
+export const CompareInput = z.object({
+  drafts: z.array(Draft).min(2, 'Compare at least two drafts.').max(3, 'Compare up to three drafts.'),
+  audience: z.string().trim().max(2000).optional(),
+  platform: z.enum(PLATFORM_IDS).optional(),
+  personas: z.number().int().min(2).max(30).optional(),
+  rounds: z.number().int().min(1).max(40).optional(),
+  critic: z.boolean().optional(),
+});
+
+const Count = z.number().int().min(0).max(1_000_000_000);
+export const OutcomeInput = z.object({
+  likes: Count,
+  reposts: Count,
+  replies: Count,
+  quotes: Count.default(0),
+  impressions: Count.nullish(),
+  note: z.string().trim().max(500).default(''),
+});
+
+export const GroupParam = z.object({ id: z.uuid(), gid: z.uuid() });
+
 export const InterviewInput = z.object({
   agent_id: z.number().int().min(1).max(10_000),
   prompt: z.string().trim().min(1, 'Ask a question.').max(1000),
@@ -47,5 +73,6 @@ export const KeyInput = z.object({ name: z.string().trim().min(1, 'Name the key 
 
 export const ListQuery = z.object({
   subject: z.string().trim().min(1).max(200).optional(),
+  group: z.uuid().optional(),
   limit: z.coerce.number().int().min(1).max(200).optional(),
 });

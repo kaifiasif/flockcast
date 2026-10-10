@@ -24,6 +24,11 @@ After the crowd reads your post, a crew of small agents helps you fix it. Each r
 
 Every rehearsal also checks the platform's rules: length, links, hashtags, the LinkedIn fold, engagement bait, all caps. The compose screen offers hard-to-reach crowds (enterprise buyers, investors, developers, journalists, Gen Z, regulated industries) as starting points.
 
+## Compare drafts and check against reality
+
+- **Compare drafts**: rehearse two or three versions of a post on one crowd. Draft A casts it; the same people, with the same luck, read the others, so differences come from the text. The page marks the crowd's pick.
+- **After you post**: enter the real likes, reposts, replies and quotes on a rehearsal. Flockcast compares how the reactions split (not how many, since a dozen simulated people cannot predict reach) and keeps score per project, including how often the crowd's pick in a comparison did best for real.
+
 ## Launch advisor
 
 Each project also has a **Launch advisor** for the product you are about to launch. Describe it in a few sentences and a crew of five agents does the rest, written for someone who has never priced or launched anything:

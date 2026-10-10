@@ -123,6 +123,23 @@ class CrowdTest(unittest.TestCase):
         self.assertIn("crowd", x)
         self.assertNotIn("studio_errors", x)
 
+    def test_a_reused_cast_gives_every_draft_the_same_people_and_luck(self):
+        settings = {"rounds": 4, "personas": 8, "audience": None, "handle": "kai", "platform": "x", "critic": True, "studio": True}
+        first = rehearse(None, {"input": {"posts": [POST]}, "settings": settings, "platform": PLATFORMS["x"]}, lambda s, p: None)
+        cast = first["state"]["personas"]
+        a = rehearse(None, {"input": {"posts": ["Version A. Read drafts backwards."], "cast": cast}, "settings": settings, "platform": PLATFORMS["x"]}, lambda s, p: None)["result"]
+        b = rehearse(None, {"input": {"posts": ["Version B. 40% of readers skip lines."], "cast": cast}, "settings": settings, "platform": PLATFORMS["x"]}, lambda s, p: None)["result"]
+        self.assertEqual([p["name"] for p in a["personas"]], [p["name"] for p in cast])
+        self.assertEqual(a["personas"], b["personas"])
+        self.assertEqual(a["critic"], 8)
+
+    def test_a_broken_cast_is_refused(self):
+        from flockcast_agents.swarm.engine import JobError
+        bad = {"input": {"posts": [POST], "cast": [{"name": "Only one"}]}, "settings": {"rounds": 2, "personas": 4, "audience": None, "handle": "kai", "platform": "x"}, "platform": PLATFORMS["x"]}
+        with self.assertRaises(JobError) as e:
+            rehearse(None, bad, lambda s, p: None)
+        self.assertEqual(e.exception.status, 400)
+
 
 class QuickTest(unittest.TestCase):
     def test_one_call_builds_a_feed_the_summary_can_read(self):

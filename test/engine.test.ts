@@ -2,10 +2,12 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
 import {
+  calibrate,
   checkBaseUrl,
   createRehearsals,
   llmFromEnv,
   memoryStore,
+  mixMatch,
   mirofishClient,
   mirofishEngine,
   pythonAgents,
@@ -166,6 +168,50 @@ test('studio crew: a harsh critic sits in every crowd, quick mode reads in one c
   // one call for the whole crowd, then the report and the three studio steps
   assert.equal(q.model_calls, 5);
   assert.ok(q.replies.length >= 1);
+});
+
+test('compare: later drafts reuse draft A\'s crowd, a failed A fails the rest, and the store keeps groups and outcomes', async () => {
+  const db = openDatabase(':memory:');
+  migrate(db);
+  db.run(`INSERT INTO users (id, email, password_hash, created_at) VALUES ('u1', 'a@b.c', 'x', '2026-01-01')`);
+  db.run(`INSERT INTO projects (id, user_id, name, platform, handle, personas, rounds, created_at, updated_at) VALUES ('p1', 'u1', 'P', 'x', '@a', 6, 2, '2026-01-01', '2026-01-01')`);
+  const { r, settle } = harness(swarmEngine(), sqliteStore(db));
+  const started = await r.compare('p1', { refs: [{ text: POST }, { text: 'Another hook entirely.' }], settings: { personas: 6, rounds: 2, mode: 'quick' } });
+  assert.equal(started[0].settings.mode, 'crowd', 'comparisons always run the full crowd');
+  await settle();
+  const [a, b] = r.list('p1', { group: started[0].group_id! }).sort((x, y) => x.variant!.localeCompare(y.variant!));
+  assert.equal(a.status, 'done');
+  assert.deepEqual(b.result!.personas, a.result!.personas);
+  await assert.rejects(r.compare('p1', { refs: [{ text: POST }] }), { status: 400 });
+
+  const done = r.recordOutcome('p1', a.id, { likes: 3, reposts: 1, replies: 2 });
+  assert.equal(done.outcome!.quotes, 0);
+  assert.equal(r.get('p1', a.id).outcome!.likes, 3, 'the sqlite store keeps outcomes');
+  assert.throws(() => r.recordOutcome('p1', a.id, { likes: -2, reposts: 0, replies: 0 }), { status: 400 });
+  assert.throws(() => r.recordOutcome('p2', a.id, { likes: 1 }), { status: 404 });
+  assert.equal(r.calibration('p1').count, 1);
+
+  // when draft A cannot run, the others say why instead of silently casting their own crowd
+  let calls = 0;
+  const flaky: Engine = { ...swarmEngine(), run: async (args) => (calls++ === 0 ? Promise.reject(new Error('model down')) : swarmEngine().run(args)) };
+  const h2 = harness(flaky);
+  const g = await h2.r.compare('p1', { refs: [{ text: 'One.' }, { text: 'Two.' }] });
+  await h2.settle();
+  const b2 = h2.r.get('p1', g[1].id);
+  assert.equal(b2.status, 'failed');
+  assert.match(b2.error!, /Draft A did not finish/);
+});
+
+test('calibration: reaction mix match and whether the favoured draft won', () => {
+  assert.equal(mixMatch({ likes: 10, reposts: 0, replies: 0, quotes: 0 }, { likes: 50, reposts: 0, replies: 0, quotes: 0 }), 1);
+  assert.equal(mixMatch({ likes: 1, reposts: 0, replies: 0, quotes: 0 }, { likes: 0, reposts: 0, replies: 4, quotes: 0 }), 0);
+  assert.equal(mixMatch({ likes: 0, reposts: 0, replies: 0, quotes: 0 }, { likes: 3, reposts: 0, replies: 0, quotes: 0 }), null);
+  const mk = (variant: string, sim: number, real: number) =>
+    ({ id: variant, title: variant, group_id: 'g', variant, result: { agents: 10, counts: { likes: sim, reposts: 0, replies: 0, quotes: 0, dislikes: 0 } }, outcome: { likes: real, reposts: 0, replies: 0, quotes: 0, impressions: null, note: '', recorded_at: 'now' } }) as unknown as Rehearsal;
+  const cal = calibrate([mk('A', 5, 100), mk('B', 2, 10)]);
+  assert.deepEqual(cal.comparisons, [{ group_id: 'g', picked: 'A', best: 'A', agreed: true }]);
+  assert.equal(cal.pick_rate, 1);
+  assert.equal(calibrate([mk('A', 2, 100), mk('B', 5, 10)]).pick_rate, 0);
 });
 
 test('a model that fails during a question answers 424, not a server error', async () => {

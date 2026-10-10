@@ -104,6 +104,10 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   assert.equal(adv.status, 202, JSON.stringify(adv.body));
   await h.settle();
   const aid = adv.body.advice.id;
+  const cmp = await me.api('POST', `/api/projects/${p.id}/comparisons`, { drafts: [{ text: POST }, { text: `${POST} Take two.` }], personas: 4, rounds: 2 });
+  assert.equal(cmp.status, 202, JSON.stringify(cmp.body));
+  await h.settle();
+  const gid = cmp.body.group_id;
   for (const [method, path, body] of [
     ['GET', `/api/projects/${p.id}`],
     ['PUT', `/api/projects/${p.id}`, { name: 'x', handle: 'x' }],
@@ -120,6 +124,11 @@ test('object-level access: another user sees 404 for every project, rehearsal an
     ['POST', `/api/projects/${p.id}/advice`, ADVICE],
     ['GET', `/api/projects/${p.id}/advice/${aid}`],
     ['DELETE', `/api/projects/${p.id}/advice/${aid}`],
+    ['POST', `/api/projects/${p.id}/comparisons`, { drafts: [{ text: 'a' }, { text: 'b' }] }],
+    ['GET', `/api/projects/${p.id}/comparisons/${gid}`],
+    ['PUT', `/api/projects/${p.id}/rehearsals/${rid}/outcome`, { likes: 1, reposts: 0, replies: 0 }],
+    ['DELETE', `/api/projects/${p.id}/rehearsals/${rid}/outcome`],
+    ['GET', `/api/projects/${p.id}/calibration`],
   ] as const) {
     const res = await them.api(method, path, body);
     assert.equal(res.status, 404, `${method} ${path} gave ${res.status}`);
@@ -129,6 +138,60 @@ test('object-level access: another user sees 404 for every project, rehearsal an
   const p2 = await h.project(me, { name: 'Other' });
   assert.equal((await me.api('GET', `/api/projects/${p2.id}/rehearsals/${rid}`)).status, 404);
   assert.equal((await me.api('GET', `/api/projects/${p2.id}/advice/${aid}`)).status, 404);
+  assert.equal((await me.api('GET', `/api/projects/${p2.id}/comparisons/${gid}`)).status, 404);
+  assert.equal((await me.api('PUT', `/api/projects/${p2.id}/rehearsals/${rid}/outcome`, { likes: 1, reposts: 0, replies: 0 })).status, 404);
+});
+
+test('compare drafts on one crowd, record real results, and see how close rehearsals came', async () => {
+  const h = createHarness();
+  const me = await h.owner();
+  const p = await h.project(me);
+  const bad = await me.api('POST', `/api/projects/${p.id}/comparisons`, { drafts: [{ text: POST }] });
+  assert.equal(bad.status, 400);
+  assert.equal(bad.body.error.code, 'VALIDATION_FAILED');
+  const same = await me.api('POST', `/api/projects/${p.id}/comparisons`, { drafts: [{ text: POST }, { text: POST }] });
+  assert.equal(same.status, 400);
+
+  const cmp = await me.api('POST', `/api/projects/${p.id}/comparisons`, { drafts: [{ text: POST, title: 'Plain' }, { text: `${POST} I tried it on 30 drafts.` }, { text: 'Read your drafts backwards. That is the whole tip.' }], personas: 6, rounds: 2 });
+  assert.equal(cmp.status, 202);
+  assert.deepEqual(cmp.body.rehearsals.map((r: { variant: string }) => r.variant), ['A', 'B', 'C']);
+  await h.settle();
+  const group = await me.api('GET', `/api/projects/${p.id}/comparisons/${cmp.body.group_id}`);
+  const [a, b, c] = group.body.rehearsals;
+  assert.ok([a, b, c].every((r) => r.status === 'done'), JSON.stringify(group.body.rehearsals.map((r: { error: string }) => r.error)));
+  const names = (r: { result: { personas: { name: string }[] } }) => r.result.personas.map((x) => x.name).join();
+  assert.equal(names(b), names(a), 'B is read by the same people as A');
+  assert.equal(names(c), names(a));
+  const listed = await me.api('GET', `/api/projects/${p.id}/rehearsals?group=${cmp.body.group_id}`);
+  assert.equal(listed.body.rehearsals.length, 3);
+
+  const out = await me.api('PUT', `/api/projects/${p.id}/rehearsals/${a.id}/outcome`, { likes: 40, reposts: 5, replies: 8, impressions: 2000, note: 'Posted Tuesday 9am' });
+  assert.equal(out.status, 200, JSON.stringify(out.body));
+  assert.equal(out.body.rehearsal.outcome.likes, 40);
+  assert.equal(out.body.rehearsal.outcome.quotes, 0);
+  await me.api('PUT', `/api/projects/${p.id}/rehearsals/${b.id}/outcome`, { likes: 10, reposts: 1, replies: 2 });
+  const neg = await me.api('PUT', `/api/projects/${p.id}/rehearsals/${c.id}/outcome`, { likes: -1, reposts: 0, replies: 0 });
+  assert.equal(neg.status, 400);
+
+  const cal = (await me.api('GET', `/api/projects/${p.id}/calibration`)).body.calibration;
+  assert.equal(cal.count, 2);
+  assert.ok(cal.average_match === null || (cal.average_match >= 0 && cal.average_match <= 1));
+  assert.equal(cal.comparisons.length, 1);
+  assert.equal(cal.comparisons[0].best, 'A');
+
+  assert.equal((await me.api('DELETE', `/api/projects/${p.id}/rehearsals/${a.id}/outcome`)).status, 200);
+  assert.equal((await me.api('GET', `/api/projects/${p.id}/calibration`)).body.calibration.count, 1);
+
+  // the same through a project key
+  const k = await me.api('POST', `/api/projects/${p.id}/keys`, { name: 'CI' });
+  const bearer = { authorization: `Bearer ${k.body.secret}` };
+  const v1 = await h.anon('POST', '/api/v1/comparisons', { drafts: [{ text: 'Hook one about drafts.' }, { text: 'Hook two about drafts.' }], personas: 4, rounds: 1 }, bearer);
+  assert.equal(v1.status, 202, JSON.stringify(v1.body));
+  await h.settle();
+  assert.equal((await h.anon('GET', `/api/v1/comparisons/${v1.body.group_id}`, undefined, bearer)).body.rehearsals.length, 2);
+  assert.equal((await h.anon('GET', `/api/v1/comparisons/${cmp.body.group_id}`, undefined, bearer)).body.rehearsals.length, 3);
+  assert.equal((await h.anon('PUT', `/api/v1/rehearsals/${b.id}/outcome`, { likes: 3, reposts: 0, replies: 1 }, bearer)).status, 200);
+  assert.equal((await h.anon('GET', '/api/v1/calibration', undefined, bearer)).body.calibration.count, 1);
 });
 
 test('API keys: shown once, hashed, one project only, revocable', async () => {

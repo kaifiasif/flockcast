@@ -38,8 +38,12 @@ CREATE TABLE IF NOT EXISTS ${table} (
   interviews_json TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(interviews_json)),
   error         TEXT,
   created_at    TEXT NOT NULL,
-  finished_at   TEXT
+  finished_at   TEXT,
+  group_id      TEXT,
+  variant       TEXT CHECK (variant IS NULL OR variant IN ('A', 'B', 'C')),
+  outcome_json  TEXT CHECK (outcome_json IS NULL OR json_valid(outcome_json))
 ) STRICT;
+CREATE INDEX IF NOT EXISTS ${table}_scope_group ON ${table} (scope, group_id);
 CREATE INDEX IF NOT EXISTS ${table}_scope_subject ON ${table} (scope, subject, created_at);
 CREATE INDEX IF NOT EXISTS ${table}_scope_created ON ${table} (scope, created_at);
 `;
@@ -62,6 +66,9 @@ interface Row {
   error: string | null;
   created_at: string;
   finished_at: string | null;
+  group_id: string | null;
+  variant: string | null;
+  outcome_json: string | null;
 }
 
 const parse = <T>(s: string | null, fallback: T): T => {
@@ -90,6 +97,9 @@ const fromRow = (r: Row): StoredRehearsal => ({
   error: r.error,
   created_at: r.created_at,
   finished_at: r.finished_at,
+  group_id: r.group_id,
+  variant: r.variant,
+  outcome: parse(r.outcome_json, null),
 });
 
 /** Columns a patch may change, and how each is stored. Anything else in a patch is ignored. */
@@ -102,9 +112,10 @@ const COLUMNS: Record<string, [string, (v: unknown) => unknown]> = {
   interviews: ['interviews_json', (v) => JSON.stringify(v ?? [])],
   error: ['error', (v) => v ?? null],
   finished_at: ['finished_at', (v) => v ?? null],
+  outcome: ['outcome_json', (v) => (v == null ? null : JSON.stringify(v))],
 };
 
-const FIELDS = 'id, scope, subject, source, title, status, progress, text_hash, settings_json, posts_json, result_json, state_json, interviews_json, error, created_at, finished_at';
+const FIELDS = 'id, scope, subject, source, title, status, progress, text_hash, settings_json, posts_json, result_json, state_json, interviews_json, error, created_at, finished_at, group_id, variant, outcome_json';
 
 export function sqliteStore(db: SqlDb, { table }: { table?: string } = {}): Store {
   const t = tableName(table);
@@ -115,9 +126,10 @@ export function sqliteStore(db: SqlDb, { table }: { table?: string } = {}): Stor
     insert(r) {
       db.run(
         `INSERT INTO ${t} (${FIELDS})
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
         r.id, r.scope, r.subject, r.source, r.title, r.status, r.progress, r.text_hash, JSON.stringify(r.settings), JSON.stringify(r.posts),
         r.result == null ? null : JSON.stringify(r.result), r.state == null ? null : JSON.stringify(r.state), JSON.stringify(r.interviews), r.error, r.created_at, r.finished_at,
+        r.group_id ?? null, r.variant ?? null, r.outcome == null ? null : JSON.stringify(r.outcome),
       );
     },
     update(scope, id, patch) {
@@ -139,11 +151,12 @@ export function sqliteStore(db: SqlDb, { table }: { table?: string } = {}): Stor
       const r = db.get<Row>(`${SELECT} WHERE scope = ? AND subject = ? ORDER BY created_at DESC, rowid DESC LIMIT 1`, scope, subject);
       return r ? fromRow(r) : undefined;
     },
-    list(scope, { subject, limit = 50 } = {}) {
-      const rows = subject
-        ? db.all<Row>(`${LIST} WHERE scope = ? AND subject = ? ORDER BY created_at DESC, rowid DESC LIMIT ?`, scope, subject, limit)
-        : db.all<Row>(`${LIST} WHERE scope = ? ORDER BY created_at DESC, rowid DESC LIMIT ?`, scope, limit);
-      return rows.map(fromRow);
+    list(scope, { subject, group, limit = 50 } = {}) {
+      const where = ['scope = ?'];
+      const params: unknown[] = [scope];
+      if (subject) where.push('subject = ?'), params.push(subject);
+      if (group) where.push('group_id = ?'), params.push(group);
+      return db.all<Row>(`${LIST} WHERE ${where.join(' AND ')} ORDER BY created_at DESC, rowid DESC LIMIT ?`, ...params, limit).map(fromRow);
     },
     countSince(scope, subject, sinceIso) {
       return db.get<{ n: number }>(`SELECT COUNT(*) AS n FROM ${t} WHERE scope = ? AND subject = ? AND created_at > ?`, scope, subject, sinceIso)?.n ?? 0;
@@ -161,5 +174,14 @@ export function sqliteStore(db: SqlDb, { table }: { table?: string } = {}): Stor
 
 /** For apps with no migrations: creates the table if it is missing. */
 export function ensureRehearsalsTable(db: { exec(sql: string): void }, { table }: { table?: string } = {}): void {
-  db.exec(rehearsalsSql(tableName(table)));
+  const t = tableName(table);
+  // tables made before comparisons and outcomes existed get the new columns; a duplicate column just throws
+  for (const col of ['group_id TEXT', "variant TEXT CHECK (variant IS NULL OR variant IN ('A', 'B', 'C'))", 'outcome_json TEXT CHECK (outcome_json IS NULL OR json_valid(outcome_json))']) {
+    try {
+      db.exec(`ALTER TABLE ${t} ADD COLUMN ${col}`);
+    } catch {
+      // already there, or the table is new and gets it below
+    }
+  }
+  db.exec(rehearsalsSql(t));
 }

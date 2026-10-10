@@ -19,6 +19,7 @@ import { BackTo } from '@/features/projects/project-page';
 import { formatDate, formatPercent, plural as count, verbPlural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { isActive, useDeleteRehearsal, useRehearsal, useStartRehearsal } from './api';
+import { OutcomePanel } from '@/features/compare/outcome-panel';
 import { AskFollower } from './ask-follower';
 import { AiCheck, CrowdWarning, Fixes, PlatformChecks, ReplyPrep } from './studio-notes';
 import { engineLabel, STAGE } from './labels';
@@ -179,6 +180,8 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
 
       <AskFollower rehearsal={r} projectId={projectId} />
 
+      <OutcomePanel r={r} projectId={projectId} />
+
       <p className="text-xs text-muted-foreground">
         {engineLabel(x)}
         {x.engine !== 'swarm-offline' && `, ${count(x.model_calls, 'model call')}`}. {x.mode === 'quick' ? `A quick read by ${x.agents} followers` : `${x.agents} followers over ${x.rounds ?? '?'} rounds`}, {x.total_actions} actions.{' '}
@@ -207,8 +210,8 @@ export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
         {(r) => (
           <>
             <PageHeader
-              back={<BackTo href={back}>Rehearsals</BackTo>}
-              title={r.title}
+              back={r.group_id ? <BackTo href={hrefOf({ name: 'comparison', id, gid: r.group_id })}>Comparison</BackTo> : <BackTo href={back}>Rehearsals</BackTo>}
+              title={r.variant ? `Draft ${r.variant}: ${r.title}` : r.title}
               description={`${formatDate(r.created_at)}. ${r.settings.personas} followers, ${r.settings.mode === 'quick' ? 'quick read' : `${r.settings.rounds} rounds`}${r.result ? `, ${engineLabel(r.result)}` : ''}.`}
               actions={
                 !isActive(r) && (

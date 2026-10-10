@@ -8,7 +8,8 @@ import { createRateLimiter, rateLimit } from '../../http/middleware/rate-limit.t
 import { validate } from '../../http/validate.ts';
 import { AdviceInput, AdviceListQuery } from '../advice/advice.schemas.ts';
 import { hashApiKey, looksLikeApiKey } from '../projects/projects.routes.ts';
-import { IdParam, InterviewInput, ListQuery, RehearsalInput } from '../projects/projects.schemas.ts';
+import { CompareInput, IdParam, InterviewInput, ListQuery, OutcomeInput, RehearsalInput } from '../projects/projects.schemas.ts';
+import { compareFor, groupFor } from './comparisons.routes.ts';
 import { engineCall } from './rehearsal-errors.ts';
 import { listFor, startFor } from './rehearsals.routes.ts';
 
@@ -59,6 +60,16 @@ export function apiV1Routes(app: AppServices) {
       const interview = await engineCall(() => app.rehearsals.interview(c.var.project.id, c.req.valid('param').id, c.req.valid('json')));
       return c.json({ interview });
     })
+    .put('/rehearsals/:id/outcome', validate('param', IdParam), validate('json', OutcomeInput), async (c) => {
+      const rehearsal = await engineCall(() => app.rehearsals.recordOutcome(c.var.project.id, c.req.valid('param').id, c.req.valid('json')));
+      return c.json({ rehearsal });
+    })
+    .post('/comparisons', validate('json', CompareInput), async (c) => {
+      const rehearsals = await compareFor(app.rehearsals, c.var.project, c.req.valid('json'));
+      return c.json({ group_id: rehearsals[0].group_id!, rehearsals }, 202);
+    })
+    .get('/comparisons/:id', validate('param', IdParam), (c) => c.json({ group_id: c.req.valid('param').id, rehearsals: groupFor(app.rehearsals, c.var.project.id, c.req.valid('param').id) }))
+    .get('/calibration', (c) => c.json({ calibration: app.rehearsals.calibration(c.var.project.id) }))
     .get('/advice', validate('query', AdviceListQuery), (c) => c.json({ advice: app.advisor.list(c.var.project.id, c.req.valid('query')) }))
     .post('/advice', validate('json', AdviceInput), async (c) => c.json({ advice: await engineCall(() => app.advisor.start(c.var.project.id, c.req.valid('json'))) }, 202))
     .get('/advice/:id', validate('param', IdParam), async (c) => c.json({ advice: await engineCall(() => app.advisor.get(c.var.project.id, c.req.valid('param').id)) }))

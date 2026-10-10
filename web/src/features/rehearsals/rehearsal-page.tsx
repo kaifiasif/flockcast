@@ -20,6 +20,7 @@ import { formatDate, formatPercent, plural as count, verbPlural } from '@/lib/fo
 import { cn } from '@/lib/utils';
 import { isActive, useDeleteRehearsal, useRehearsal, useStartRehearsal } from './api';
 import { AskFollower } from './ask-follower';
+import { AiCheck, CrowdWarning, Fixes, PlatformChecks, ReplyPrep } from './studio-notes';
 import { engineLabel, STAGE } from './labels';
 
 function Running({ r }: { r: Rehearsal }) {
@@ -29,7 +30,7 @@ function Running({ r }: { r: Rehearsal }) {
       <div className="space-y-1">
         <h2 className="text-2xl">{STAGE[r.status]}</h2>
         <p className="text-sm text-body">
-          {r.settings.personas} followers, {r.settings.rounds} rounds. This page updates on its own; you can leave and come back.
+          {r.settings.mode === 'quick' ? `A quick read by ${r.settings.personas} followers.` : `${r.settings.personas} followers, ${r.settings.rounds} rounds.`} This page updates on its own; you can leave and come back.
         </p>
       </div>
       <Progress value={Math.max(4, r.progress)} className="h-2 w-full max-w-sm" aria-label="Rehearsal progress" />
@@ -110,15 +111,17 @@ function Replies({ x }: { x: RehearsalResult }) {
     <ul className="grid gap-3 md:grid-cols-2">
       {x.replies.map((r, i) => {
         const p = byId.get(r.agent_id);
+        const critic = r.agent_id === x.critic;
         return (
           <li key={i} className="flex gap-3 rounded-3xl border bg-card p-4">
-            <Pip variant={pipFor({ id: r.agent_id, stance: p?.stance })} className="-mt-1 -ml-1 size-12" />
+            <Pip variant={critic ? 'contrarian' : pipFor({ id: r.agent_id, stance: p?.stance })} className="-mt-1 -ml-1 size-12" />
             <div className="min-w-0 text-sm">
               <p className="leading-tight">
                 <span className="font-semibold text-foreground">{r.agent_name}</span> {p && <span className="text-muted-foreground">{p.segment}</span>}
               </p>
               <p className="mt-1 text-[15px] text-body">{r.text}</p>
               <p className="mt-2 flex flex-wrap gap-1.5 text-xs">
+                {critic && <span className="rounded-full bg-foreground px-2 py-px font-medium text-background">harsh critic</span>}
                 {r.stance === 'pushback' && <span className="rounded-full bg-brand-soft px-2 py-px font-medium text-brand">pushback</span>}
                 <span className="rounded-full bg-muted px-2 py-px text-muted-foreground">{r.kind === 'quote' ? 'quote' : 'reply'}</span>
                 {r.round !== null && <span className="rounded-full bg-muted px-2 py-px text-muted-foreground">round {r.round}</span>}
@@ -147,6 +150,9 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
         <Stat label="Pushback" value={formatPercent(x.pushback_share)} tone={x.pushback_share >= 0.34 ? 'brand' : 'support'} />
       </div>
 
+      <CrowdWarning x={x} />
+      <Fixes x={x} />
+
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
         <Sentences x={x} />
         <section className="rounded-3xl border bg-band p-6 md:p-8">
@@ -157,16 +163,25 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
         </section>
       </div>
 
+      {(x.ai_check || x.checks) && (
+        <div className="grid items-start gap-6 lg:grid-cols-2">
+          <AiCheck x={x} />
+          <PlatformChecks x={x} platformName={platform?.id === 'generic' ? 'Platform' : (platform?.name ?? 'Platform')} />
+        </div>
+      )}
+
       <section className="space-y-4">
         <h2 className="text-2xl">What the crowd said</h2>
         <Replies x={x} />
       </section>
 
+      <ReplyPrep x={x} />
+
       <AskFollower rehearsal={r} projectId={projectId} />
 
       <p className="text-xs text-muted-foreground">
         {engineLabel(x)}
-        {x.engine !== 'swarm-offline' && `, ${count(x.model_calls, 'model call')}`}. {x.agents} followers over {x.rounds ?? '?'} rounds, {x.total_actions} actions.{' '}
+        {x.engine !== 'swarm-offline' && `, ${count(x.model_calls, 'model call')}`}. {x.mode === 'quick' ? `A quick read by ${x.agents} followers` : `${x.agents} followers over ${x.rounds ?? '?'} rounds`}, {x.total_actions} actions.{' '}
         {x.draft_seeded ? 'Your draft was posted to the crowd word for word.' : `Your draft was matched at ${formatPercent(x.draft_match)}.`}
       </p>
     </div>
@@ -182,7 +197,7 @@ export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
   // the same text and settings again; force skips the saved result
   const rerun = (r: Rehearsal) =>
     start.mutate(
-      { text: r.posts.join('\n---\n'), title: r.title, platform: r.settings.platform as never, personas: r.settings.personas, rounds: r.settings.rounds, audience: r.settings.audience ?? undefined, force: true },
+      { text: r.posts.join('\n---\n'), title: r.title, platform: r.settings.platform as never, personas: r.settings.personas, rounds: r.settings.rounds, audience: r.settings.audience ?? undefined, critic: r.settings.critic, mode: r.settings.mode, force: true },
       { onSuccess: (next) => navigate({ name: 'rehearsal', id, rid: next.id }), onError: (e) => toast.error(errorMessage(e)) },
     );
 
@@ -194,7 +209,7 @@ export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
             <PageHeader
               back={<BackTo href={back}>Rehearsals</BackTo>}
               title={r.title}
-              description={`${formatDate(r.created_at)}. ${r.settings.personas} followers, ${r.settings.rounds} rounds${r.result ? `, ${engineLabel(r.result)}` : ''}.`}
+              description={`${formatDate(r.created_at)}. ${r.settings.personas} followers, ${r.settings.mode === 'quick' ? 'quick read' : `${r.settings.rounds} rounds`}${r.result ? `, ${engineLabel(r.result)}` : ''}.`}
               actions={
                 !isActive(r) && (
                   <>

@@ -2,14 +2,17 @@
  * Pip, the Flockcast mascot: a plush coral bird, drawn as a die-cut sticker. Each variant is one kind
  * of follower in a rehearsal (the skeptic in glasses, the fan in a party hat, the newcomer in a beanie)
  * plus a few for app states (sleepy while loading, a bandage when something breaks), and one for each
- * agent of the launch advisor (the scout in a pith helmet, the baron in a top hat).
+ * agent of the launch advisor (the scout in a pith helmet, the baron in a top hat) and of the studio
+ * crew (the sniffer in a deerstalker, the editor in a green visor).
  *
  * The art is static markup with no user input in it, so the component renders it as SVG markup, and
  * `npm run stickers` writes the same art to standalone SVG and PNG sticker files.
  */
-export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops' | AgentVariant;
+export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops' | AgentVariant | StudioVariant;
 /** The launch advisor's crew: one sticker per agent, named in engine/advisor/agents.ts. */
 export type AgentVariant = 'scout' | 'professor' | 'murmur' | 'baron' | 'captain';
+/** The studio crew that helps fix a post, named in engine/swarm/crew.ts. */
+export type StudioVariant = 'sniffer' | 'editor' | 'contrarian' | 'herald' | 'wren';
 
 interface Parts {
   /** drawn over the body, inside the sticker edge: hats, glasses, props */
@@ -99,6 +102,35 @@ export const PIP_VARIANTS: Record<PipVariant, Parts & { label: string; blurb: st
     label: 'Captain Compass',
     blurb: 'Makes the call and writes your launch plan.',
     front: `<path d="M35 31 c-4 -24 54 -24 50 0z" fill="#FBFAF9" stroke="#D6D3D1" stroke-width="1.4"/><path d="M33 30 q27 8 54 0 l-3 6 q-24 7 -48 0z" fill="${INK}"/><rect x="36" y="25" width="48" height="5" fill="#1F3A5F"/><circle cx="60" cy="19" r="4.5" fill="#F2B15F"/><path d="M57 19 h6 M60 16 v6" stroke="#C98B2E" stroke-width="1.2"/><circle cx="60" cy="80" r="13" fill="#FBFAF9" stroke="#F2B15F" stroke-width="3.4"/><path d="M60 69 l3.5 11 h-7z" fill="#E4544B"/><path d="M60 91 l3.5 -11 h-7z" fill="${INK}"/><circle cx="60" cy="80" r="1.8" fill="#F2B15F"/>`,
+  },
+  sniffer: {
+    label: 'Sable the Sniffer',
+    blurb: 'Sniffs out the lines that read as AI-written.',
+    front: `<path d="M33 33 c-2 -26 56 -26 54 0z" fill="#9C7A4E"/><path d="M40 16 l40 0 M36 24 l48 0 M48 9 l0 22 M60 7 l0 24 M72 9 l0 22" stroke="#7A5C36" stroke-width="1.6"/><path d="M33 33 q-8 6 -6 14 q6 -6 12 -10z M87 33 q8 6 6 14 q-6 -6 -12 -10z" fill="#7A5C36"/><rect x="31" y="29" width="58" height="6" rx="3" fill="#7A5C36"/>`,
+    loose: `<path d="M98 50 q6 -2 8 2 q-4 2 -2 6 M104 40 q7 -1 9 4 q-5 1 -4 6" stroke="#A8A29E" stroke-width="2" fill="none" stroke-linecap="round"/>`,
+  },
+  editor: {
+    label: 'Editor Ember',
+    blurb: 'Marks what to fix and hands you a rewrite.',
+    front: `<path d="M30 34 q30 -16 60 0 l-4 6 q-26 -10 -52 0z" fill="#4F7A5A" fill-opacity=".85"/><rect x="30" y="27" width="60" height="5" rx="2.5" fill="${INK}"/><g transform="rotate(-38 94 82)"><rect x="82" y="78" width="30" height="8" rx="1.5" fill="#E4544B"/><path d="M112 78 l8 4 l-8 4z" fill="#F2D6B3"/><path d="M118 81 l2 1 l-2 1z" fill="${INK}"/><rect x="80" y="78" width="4" height="8" fill="#D6D3D1"/></g>`,
+  },
+  contrarian: {
+    label: 'Rook the Contrarian',
+    blurb: 'The harsh critic in every crowd.',
+    front: `<ellipse cx="58" cy="26" rx="26" ry="9" fill="${INK}"/><circle cx="58" cy="17" r="3" fill="${INK}"/><path d="M38 37 l14 5 M82 37 l-14 5" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><g transform="rotate(180 96 84)"><rect x="88" y="80" width="14" height="12" rx="4" fill="#F2B15F"/><rect x="92" y="70" width="6" height="12" rx="3" fill="#F2B15F"/></g>`,
+    face: `${eyes}<path d="M55 55 q5 -3 10 0 q-5 6 -10 0z" fill="#F2B15F"/><path d="M53 64 q7 -4 14 0" stroke="${INK}" stroke-width="2" fill="none" stroke-linecap="round"/>${cheeks}`,
+  },
+  herald: {
+    label: 'Echo the Herald',
+    blurb: 'Readies your answers to the first replies.',
+    front: `<path d="M30 32 q30 -30 60 0 q-30 -6 -60 0z" fill="#1F3A5F"/><path d="M30 32 q-6 -8 0 -12 q14 8 30 6 q16 2 30 -6 q6 4 0 12" fill="none" stroke="#F2B15F" stroke-width="2.2"/><circle cx="60" cy="18" r="3.5" fill="#F2B15F"/><g transform="rotate(-14 96 80)"><path d="M84 78 h20 l12 -8 v22 l-12 -8 h-20z" fill="#F2B15F" stroke="#C98B2E" stroke-width="1.4"/><rect x="88" y="84" width="4" height="10" rx="2" fill="#C98B2E"/></g>`,
+    loose: `<path d="M118 66 l6 -4 M120 78 h7 M118 90 l6 4" stroke="#C98B2E" stroke-width="2.2" stroke-linecap="round"/>`,
+  },
+  wren: {
+    label: 'Wren',
+    blurb: 'A quick read in one pass.',
+    front: `<path d="M36 32 c0 -22 48 -22 48 0z" fill="#F2B15F"/><path d="M84 31 q14 0 18 6 q-12 -1 -18 -1z" fill="#C98B2E"/><circle cx="60" cy="12" r="3" fill="#C98B2E"/><circle cx="94" cy="84" r="11" fill="#FBFAF9" stroke="${INK}" stroke-width="2.6"/><rect x="91" y="69" width="6" height="4" rx="1" fill="${INK}"/><path d="M94 84 v-6 M94 84 l4 3" stroke="#E4544B" stroke-width="2" stroke-linecap="round"/>`,
+    loose: `<path d="M2 56 h12 M0 66 h16 M4 76 h10" stroke="#C9443A" stroke-width="2.4" stroke-linecap="round"/>`,
   },
 };
 

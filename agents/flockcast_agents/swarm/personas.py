@@ -100,3 +100,29 @@ def offline_personas(audience, count, rng) -> list:
             "follows_author": follows,
         })
     return out
+
+
+# Rook the Contrarian: synthetic crowds are known to be too agreeable, so a tough crowd always has one
+# reader who goes looking for the weakest claim
+CRITIC = {
+    "name": "Rook (harsh critic)",
+    "segment": "Harsh critic",
+    "bio": "Reads every post looking for the weakest claim and says so in public. Hard to impress, but fair when something holds up.",
+    "interests": ["evidence", "clarity", "overclaiming"],
+    "stance": "skeptical",
+    "activity": 1.0,
+    "follows_author": True,
+}
+
+
+def tough_crowd(personas, count):
+    """Adds the critic in the last seat and makes sure at least a quarter of the crowd is skeptical."""
+    crowd = [dict(p) for p in personas[: count - 1]]
+    crowd.append({**CRITIC, "id": len(crowd) + 1})
+    need = -(-count // 4)
+    for p in reversed(crowd[:-1]):
+        if sum(1 for x in crowd if x["stance"] == "skeptical") >= need:
+            break
+        if p["stance"] == "neutral":
+            p["stance"] = "skeptical"
+    return crowd

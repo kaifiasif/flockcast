@@ -32,5 +32,6 @@ export { sqliteAdviceStore, memoryAdviceStore, ADVICE_SQL } from './advisor/stor
 export { searchSourcesFromEnv } from './advisor/search.ts';
 export type { SearchEnv } from './advisor/search.ts';
 export { ADVISOR_AGENTS, AGENTS_AT } from './advisor/agents.ts';
+export { STUDIO_AGENTS, type StudioAgent } from './swarm/crew.ts';
 export type { AdvisorAgent } from './advisor/agents.ts';
 export * from './advisor/types.ts';

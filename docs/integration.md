@@ -37,13 +37,14 @@ curl -X POST $FLOCKCAST/api/v1/rehearsals/<id>/interview \
 | Endpoint | Does |
 |---|---|
 | `GET /api/v1/project` | The project this key belongs to |
-| `POST /api/v1/rehearsals` | Starts a rehearsal. Body: `text` (required; `---` lines split a thread), `subject`, `title`, `platform`, `personas`, `rounds`, `audience`, `force`. Answers 202 with the rehearsal |
+| `POST /api/v1/rehearsals` | Starts a rehearsal. Body: `text` (required; `---` lines split a thread), `subject`, `title`, `platform`, `personas`, `rounds`, `audience`, `critic` (default true: seat a harsh critic), `mode` (`crowd` or `quick`), `force`. Answers 202 with the rehearsal |
 | `GET /api/v1/rehearsals?subject=draft-42&limit=20` | Recent rehearsals, newest first, optionally for one subject |
 | `GET /api/v1/rehearsals/:id` | One rehearsal, with `status`, `progress` (0 to 100) and, when done, `result` |
 | `POST /api/v1/rehearsals/:id/interview` | Asks follower `agent_id` a question. 409 when the rehearsal ran offline |
 
 Behaviour worth knowing:
 
+- **Studio notes.** A finished result also carries `mode`, `critic` (the critic's persona id), `crowd` (friendliness and a warning when the crowd agreed with everything), `checks` (platform rules), `ai_check` (sentences that read as AI-written), `fixes` (why a sentence drew pushback, who said what, and a rewrite when a model is set) and `reply_prep` (likely first replies with drafted answers). Older rehearsals and MiroFish runs leave them out, so treat them as optional.
 - **Same text, same answer.** Starting a rehearsal whose text and settings match the last finished one for that subject returns it without spending model calls. Pass `"force": true` to run a new crowd anyway.
 - **Subjects.** `subject` is your id for the draft. Reruns of one subject form one history and share the daily cap (10 a day by default). Without it, the text itself is the subject.
 - **Errors** are always `{ "error": { "code", "message" } }`: 400 `VALIDATION_FAILED`, 401 bad key, 404 not found or not yours, 409 not ready or no interviews offline, 429 rate or spend cap (with `Retry-After`), 502 the model failed.

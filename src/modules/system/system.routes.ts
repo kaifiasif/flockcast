@@ -1,4 +1,4 @@
-import { PLATFORMS } from '../../../engine/index.ts';
+import { PLATFORMS, STUDIO_AGENTS } from '../../../engine/index.ts';
 import type { AppServices } from '../../context.ts';
 import { router } from '../../http/types.ts';
 
@@ -20,6 +20,7 @@ export function systemRoutes(app: AppServices) {
       limits: { ...app.rehearsals.limits },
       defaults: app.rehearsals.defaults,
       signup: app.config.signup,
+      studio: { agents: STUDIO_AGENTS, modes: app.engine.kind === 'mirofish' ? ['crowd'] : ['crowd', 'quick'] },
       advisor: { mode: app.advisor.mode, sources: app.advisor.sources, agents: app.advisor.agents, limits: app.advisor.limits },
     }),
   );

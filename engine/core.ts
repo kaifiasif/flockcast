@@ -37,7 +37,7 @@ export interface Limits {
 
 export const DEFAULT_LIMITS: Limits = { rehearsalsPerSubjectPerDay: 10, interviewsPerRehearsal: 25, maxRounds: 40, maxPersonas: 30, maxTextChars: 10_000 };
 
-export const DEFAULT_SETTINGS: RehearsalSettings = { rounds: 10, personas: 12, audience: null, handle: 'the author', platform: 'x' };
+export const DEFAULT_SETTINGS: RehearsalSettings = { rounds: 10, personas: 12, audience: null, handle: 'the author', platform: 'x', critic: true, mode: 'crowd' };
 
 export interface StartRequest {
   /** Source name; defaults to "text". */
@@ -105,6 +105,8 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
       audience,
       handle,
       platform: platformOf(s.platform).id,
+      critic: s.critic !== false,
+      mode: s.mode === 'quick' ? 'quick' : 'crowd',
     };
   }
 

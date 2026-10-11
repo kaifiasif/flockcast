@@ -124,8 +124,38 @@ function studioAnswer(prompt: string): unknown {
   return null;
 }
 
+/** The research crew: panels, focus groups, message tests, crisis rehearsals and brand voice. */
+function researchAnswer(prompt: string): unknown {
+  const ids = () => [...prompt.matchAll(/^#(\d+) /gm)].map((m) => Number(m[1]));
+  const recruit = prompt.match(/Recruit (\d+) people for each of these groups:\n((?:- .+\n?)+)/);
+  if (recruit) {
+    const groups = [...recruit[2].matchAll(/^- ([^:\n]+)/gm)].map((m) => m[1].trim());
+    return { people: groups.flatMap((g) => Array.from({ length: Number(recruit[1]) }, (_, i) => ({ name: `${g.split(' ')[0]} ${String.fromCharCode(65 + i)}.`, segment: g, bio: `Works in ${g.toLowerCase()}.`, stance: ['supportive', 'skeptical', 'neutral'][i % 3] }))) };
+  }
+  if (/simulated focus group/.test(prompt)) {
+    return { answers: ids().map((id) => ({ person: id, text: id % 2 ? 'I like that it shows who pushes back before I post.' : 'Where does the 80% come from? I would not share it without that.', sentiment: id % 2 ? 'positive' : 'negative' })) };
+  }
+  if (/experienced focus group moderator/.test(prompt)) {
+    const all = ids();
+    return { themes: [{ title: 'Proof before sharing', detail: 'Skeptics want a source for the headline number.', people: all.filter((i) => i % 2 === 0) }], agreement: 'Seeing pushback early is useful.', disagreement: 'Whether the number is believable.', by_segment: [], recommendations: ['Link the source for 80%.'] };
+  }
+  if (/rate messages the way that person/.test(prompt)) {
+    const versions = [...prompt.matchAll(/^([A-D]): /gm)].map((m) => m[1]);
+    return { ratings: ids().flatMap((id) => versions.map((v, i) => ({ person: id, message: v, appeal: i === 1 ? 4 : 2, clarity: 4, credibility: i === 1 ? 4 : 2, act: i === 1, says: i === 1 ? 'Clear and I know what to do.' : 'Sounds like hype.' }))) };
+  }
+  if (/stakeholder groups react/.test(prompt)) {
+    const groups = [...prompt.matchAll(/^- (customers|press|employees|investors|regulators|critics):/gm)].map((m) => m[1]);
+    const statement = prompt.split('The statement:\n')[1]?.split('\n')[0] ?? '';
+    return { reactions: groups.map((g, i) => ({ group: g, heat: 3 + (i % 2), reaction: `${g} want to know who is responsible.`, worst_line: statement.split('.')[0], question: 'When will it be fixed?' })) };
+  }
+  if (/how a story develops/.test(prompt)) return { spread: 'medium', why: 'The vendor line invites a follow-up.', headlines: ['App blames vendor for outage'], follow_ups: ['Which vendor?'] };
+  if (/crisis communications adviser/.test(prompt)) return { changes: ['Apologise first.', 'Say what you will do and when.'], revised: 'We are sorry. Our payments were down for 6 hours on Monday, and 2,000 orders failed. We will refund every one by [fact].' };
+  if (/You are a brand editor/.test(prompt)) return { fits: false, why: 'The tone is louder than the brand voice.', issues: [{ sentence: 1, rule: 'Calm voice', why: 'Reads as hype.' }] };
+  return null;
+}
+
 export function answer(prompt: string): unknown {
-  const advice = advisorAnswer(prompt) ?? studioAnswer(prompt);
+  const advice = advisorAnswer(prompt) ?? studioAnswer(prompt) ?? researchAnswer(prompt);
   if (advice) return advice;
   const count = prompt.match(/Create (\d+) distinct people/);
   if (count) {

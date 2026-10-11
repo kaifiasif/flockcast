@@ -4,18 +4,18 @@ import type { Project } from '../../db/repositories/projects.repository.ts';
 import { notFound } from '../../core/errors.ts';
 import { router } from '../../http/types.ts';
 import { validate } from '../../http/validate.ts';
-import { requireFeature } from '../../core/plans.ts';
+import { requireFeature, type Plan } from '../../core/plans.ts';
 import { checkRehearsalPlan, ownProject } from '../projects/access.ts';
 import { CompareInput, GroupParam, IdParam, OutcomeInput, ProjectRehearsalParam } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
 import { settingsFor } from './rehearsals.routes.ts';
 
-export function compareFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof CompareInput>) {
+export function compareFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof CompareInput>, plan: Plan) {
   return engineCall(() =>
     rehearsals.compare(project.id, {
       source: 'text',
       refs: body.drafts.map((d) => ({ text: d.text, title: d.title })),
-      settings: settingsFor(project, body),
+      settings: settingsFor(project, body, plan),
     }),
   );
 }
@@ -37,7 +37,7 @@ export function comparisonsRoutes() {
       const plan = ctx.planOf(project);
       requireFeature(plan, 'compare');
       checkRehearsalPlan(plan, ctx.usedThisMonth(project), body, project, body.drafts.length);
-      const rehearsals = await compareFor(ctx.rehearsals, project, body);
+      const rehearsals = await compareFor(ctx.rehearsals, project, body, plan);
       ctx.audit(project, 'comparison.started', rehearsals[0].group_id!, { drafts: rehearsals.length });
       return c.json({ group_id: rehearsals[0].group_id!, rehearsals }, 202);
     })

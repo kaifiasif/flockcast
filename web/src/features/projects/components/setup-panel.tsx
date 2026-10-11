@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { useDeleteProject, useUpdateProject } from '../api';
 import { ProjectForm } from './project-form';
+import { BrandPanel } from '@/features/research/brand-panel';
 
 export function SetupPanel({ project }: { project: Project }) {
   const update = useUpdateProject(project.id);
@@ -35,13 +36,16 @@ export function SetupPanel({ project }: { project: Project }) {
           }
         />
       </section>
-      <aside className="h-fit rounded-3xl border border-[#f1c9c4] bg-card p-6">
-        <h2 className="text-lg">Delete this project</h2>
-        <p className="mt-1 text-sm text-body">Removes its rehearsals and stops its API keys working. This cannot be undone.</p>
-        <Button variant="outline" className="mt-4 text-destructive" onClick={() => setConfirming(true)}>
-          Delete project
-        </Button>
-      </aside>
+      <div className="grid h-fit gap-6">
+        <BrandPanel key={project.updated_at} project={project} />
+        <aside className="h-fit rounded-3xl border border-[#f1c9c4] bg-card p-6">
+          <h2 className="text-lg">Delete this project</h2>
+          <p className="mt-1 text-sm text-body">Removes its rehearsals and stops its API keys working. This cannot be undone.</p>
+          <Button variant="outline" className="mt-4 text-destructive" onClick={() => setConfirming(true)}>
+            Delete project
+          </Button>
+        </aside>
+      </div>
       <AlertDialog open={confirming} onOpenChange={setConfirming}>
         <AlertDialogContent>
           <AlertDialogHeader>

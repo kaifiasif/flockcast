@@ -9,7 +9,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 import { calibrate } from './calibration.ts';
 import { platformOf } from './platforms.ts';
-import type { Engine, Interview, Outcome, Rehearsal, RehearsalSettings, Source, Store, StoredRehearsal } from './types.ts';
+import type { BrandRules, Engine, Interview, Outcome, Rehearsal, RehearsalSettings, Source, Store, StoredRehearsal } from './types.ts';
 import { ACTIVE_STATUSES } from './types.ts';
 
 export type RehearsalErrorCode = 'NOT_FOUND' | 'INVALID' | 'GATE_CLOSED' | 'NOT_READY' | 'NO_INTERVIEWS' | 'RATE_LIMITED' | 'MODEL_FAILED' | 'UNKNOWN_SOURCE';
@@ -103,6 +103,16 @@ function clampInt(v: unknown, lo: number, hi: number, name: string): number {
   return n;
 }
 
+const words = (v: unknown, max: number, len: number) => (Array.isArray(v) ? v.map((w) => String(w).trim().slice(0, len)).filter(Boolean).slice(0, max) : []);
+
+/** Brand rules, trimmed and capped; null when there is nothing to check. */
+export function brandOf(v: unknown): BrandRules | null {
+  if (!v || typeof v !== 'object') return null;
+  const r = v as Record<string, unknown>;
+  const rules = { voice: String(r.voice ?? '').trim().slice(0, 600), banned: words(r.banned, 50, 60), required: words(r.required, 10, 120), notes: String(r.notes ?? '').trim().slice(0, 1000) };
+  return rules.voice || rules.notes || rules.banned.length || rules.required.length ? rules : null;
+}
+
 export function createRehearsals(opts: CreateRehearsalsOptions) {
   const { store, engine } = opts;
   const limits: Limits = { ...DEFAULT_LIMITS, ...opts.limits };
@@ -123,6 +133,8 @@ export function createRehearsals(opts: CreateRehearsalsOptions) {
       platform: platformOf(s.platform).id,
       critic: s.critic !== false,
       mode: s.mode === 'quick' ? 'quick' : 'crowd',
+      // only present when set, so rehearsals without brand rules hash as they always did
+      ...(brandOf(s.brand) ? { brand: brandOf(s.brand) } : {}),
     };
   }
 

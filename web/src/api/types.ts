@@ -38,3 +38,12 @@ export type AdvisorInfo = AppConfig['advisor'];
 export type AdvisorAgent = keyof AdvisorInfo['agents'];
 export type StudioInfo = AppConfig['studio'];
 export type StudioAgent = keyof StudioInfo['agents'];
+
+export type Study = Ok<Api['projects'][':id']['studies'][':sid']['$get']>['study'];
+export type StudySummary = Ok<Api['projects'][':id']['studies']['$get']>['studies'][number];
+export type StudyResult = NonNullable<Study['result']>;
+export type StudyInput = InferRequestType<Api['projects'][':id']['studies']['$post']>['json'];
+export type ResearchInfo = AppConfig['research'];
+export type ResearchAgent = keyof ResearchInfo['agents'];
+export type BrandRules = NonNullable<Project['brand']>;
+export type BrandCheck = NonNullable<RehearsalResult['brand']>;

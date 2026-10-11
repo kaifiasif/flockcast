@@ -20,6 +20,7 @@ import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { useAppConfig, useProject } from '@/features/projects/api';
 import { takeDraft } from '@/lib/draft-handoff';
 import { BackTo } from '@/features/projects/project-page';
+import { useUsage } from '@/features/team/api';
 import { useRehearsal, useStartRehearsal } from './api';
 
 const SPLIT = /\n\s*---\s*\n/;
@@ -42,6 +43,7 @@ function Composer({ project, from }: { project: Project; from?: Rehearsal }) {
   const [title, setTitle] = useState(from?.title ?? '');
   const [platform, setPlatform] = useState(from?.settings.platform ?? project.platform);
   const [personas, setPersonas] = useState(from?.settings.personas ?? project.personas);
+  const crowdCap = useUsage(project.id).data?.plan.limits.maxPersonas ?? 30;
   const [rounds, setRounds] = useState(from?.settings.rounds ?? project.rounds);
   const [audience, setAudience] = useState(from && from.settings.audience !== project.audience ? (from.settings.audience ?? '') : '');
   const [mode, setMode] = useState<'crowd' | 'quick'>(from?.settings.mode ?? 'crowd');
@@ -114,7 +116,8 @@ function Composer({ project, from }: { project: Project; from?: Rehearsal }) {
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="personas">Followers</FieldLabel>
-                  <Input id="personas" type="number" min={2} max={30} value={personas} onChange={(e) => setPersonas(Number(e.target.value))} />
+                  <Input id="personas" type="number" min={2} max={crowdCap} value={personas} onChange={(e) => setPersonas(Number(e.target.value))} />
+                  {crowdCap > 30 && <FieldDescription>Up to {crowdCap} on this plan.</FieldDescription>}
                 </Field>
                 <Field>
                   <FieldLabel htmlFor="rounds">Rounds</FieldLabel>

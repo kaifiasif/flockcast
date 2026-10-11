@@ -10,7 +10,7 @@ import { spawn } from 'node:child_process';
 import { resolve } from 'node:path';
 import type { LlmConfig } from './llm.ts';
 
-export type AgentJob = 'rehearse' | 'interview' | 'advise' | 'summarize';
+export type AgentJob = 'rehearse' | 'interview' | 'advise' | 'study' | 'summarize';
 
 /** A job that failed, with an HTTP-style status the caller can pass on. Messages are written for people. */
 export class AgentError extends Error {
@@ -42,7 +42,7 @@ export interface Agents {
 const AGENTS_DIR = resolve(import.meta.dirname, '../agents');
 const MAX_OUTPUT = 20_000_000;
 // free tiers rate-limit per minute, and a long rehearsal makes a dozen calls with waits between them
-const TIMEOUTS: Record<AgentJob, number> = { rehearse: 15 * 60_000, advise: 15 * 60_000, interview: 3 * 60_000, summarize: 60_000 };
+const TIMEOUTS: Record<AgentJob, number> = { rehearse: 15 * 60_000, advise: 15 * 60_000, study: 15 * 60_000, interview: 3 * 60_000, summarize: 60_000 };
 /** Passed through so outbound calls work behind a corporate proxy or a custom CA. */
 const PASSTHROUGH = ['PATH', 'HTTPS_PROXY', 'https_proxy', 'HTTP_PROXY', 'http_proxy', 'NO_PROXY', 'no_proxy', 'SSL_CERT_FILE', 'SSL_CERT_DIR', 'SYSTEMROOT'];
 

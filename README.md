@@ -37,6 +37,15 @@ Every rehearsal also checks the platform's rules: length, links, hashtags, the L
 - **Usage, export and audit log.** Rehearsals this month, a CSV or JSON export, and a log of who started, approved, exported or changed what.
 - **Plans.** Free, Creator ($19), Studio ($49) and Enterprise each unlock more. Plans are off by default, so a self-hosted server has every feature. Set `FLOCKCAST_PLANS=on` to enforce them and change someone's plan with `npm run plan -- you@example.com studio`.
 
+## Research and brand rules
+
+- **Focus group** (Moderator Maple): a panel recruited from the groups you name, including hard-to-reach ones, answers up to five questions about your material. You get the transcript, warmth by group, themes with quotes, where they agreed and split, and what to change.
+- **Message test** (Tally the Pollster): two to four versions rated by each group for appeal, clarity and believability. Every group counts the same, so a large group cannot drown out a small one, and a split between groups is called out.
+- **Crisis rehearsal** (Juniper the Steady): customers, press, critics, employees, investors or regulators react to a holding statement, round by round. You get heat per group, the line each group will quote against you, checks for apology, ownership, deflection and next steps, and a revised statement that cannot add facts you did not give (invented numbers become `[fact]`).
+- **Brand rules** (Ivy the Guardian, Studio plan): a project's voice, banned words and required lines. Every rehearsal and message test is checked against them.
+
+Studies are a rehearsal of the conversation, not a survey or a forecast. Without a model key they run as a labelled offline estimate.
+
 ## Launch advisor
 
 Each project also has a **Launch advisor** for the product you are about to launch. Describe it in a few sentences and a crew of five agents does the rest, written for someone who has never priced or launched anything:
@@ -99,6 +108,7 @@ All optional; see `.env.example`.
 | `REHEARSAL_ENGINE` / `MIROFISH_URL` | `swarm` | `mirofish` uses a MiroFish server you run (see `sidecar/mirofish`) |
 | `REHEARSALS_PER_SUBJECT_PER_DAY` | `10` | Spend cap per draft |
 | `INTERVIEWS_PER_REHEARSAL` | `25` | Spend cap per rehearsal |
+| `STUDIES_PER_PROJECT_PER_DAY` | `10` | Spend cap on focus groups, message tests and crisis rehearsals per project |
 | `FLOCKCAST_PLANS` | `off` | `on` enforces Free, Creator, Studio and Enterprise limits per account; `off` gives everyone every feature |
 | `WEBHOOKS_ALLOW_PRIVATE` | off | Lets webhooks reach private and local addresses. For testing only |
 

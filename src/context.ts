@@ -1,4 +1,4 @@
-import { createAdvisor, createRehearsals, sqliteAdviceStore, sqliteStore, textSource, type Advisor, type Agents, type Engine, type Rehearsals, type SearchSource } from '../engine/index.ts';
+import { createAdvisor, createRehearsals, createResearch, sqliteAdviceStore, sqliteStore, sqliteStudyStore, textSource, type Advisor, type Research, type Agents, type Engine, type Rehearsals, type SearchSource } from '../engine/index.ts';
 import type { AppConfig } from './config/env.ts';
 import { createJobRunner, type JobRunner } from './core/jobs.ts';
 import { createLogger, errorFields, type Logger } from './core/logger.ts';
@@ -30,6 +30,7 @@ export interface AppServices {
   accounts: AccountsRepository;
   rehearsals: Rehearsals;
   advisor: Advisor;
+  research: Research;
   /** For /api/config: which engine and model run, never their keys. */
   engine: { kind: Engine['kind']; model: string | null; provider: string | null; interviews: boolean };
   webhooks: WebhookSender;
@@ -51,6 +52,7 @@ export interface AppContext {
   hooks: WebhooksRepository;
   rehearsals: Rehearsals;
   advisor: Advisor;
+  research: Research;
   planOf(project: Pick<Project, 'owner_plan'>): Plan;
   /** This user's own plan id, for what they create. */
   ownPlan(): string;
@@ -105,6 +107,14 @@ export function createContext(deps: {
     onError: (e, at) => log.warn('advice_failed', { project_id: at.scope, advice_id: at.id, ...errorFields(e) }),
   });
 
+  const research = createResearch({
+    store: sqliteStudyStore(deps.db),
+    agents: deps.agents,
+    background: (job) => jobs.enqueue('study', job),
+    limits: { runsPerScopePerDay: deps.config.limits.studiesPerProjectPerDay },
+    onError: (e, at) => log.warn('study_failed', { project_id: at.scope, study_id: at.id, ...errorFields(e) }),
+  });
+
   const planOf = (project: Pick<Project, 'owner_plan'>) => effectivePlan(deps.config.plans, project.owner_plan);
   const audit: AppServices['audit'] = (projectId, who, action, target, details) => {
     try {
@@ -122,6 +132,7 @@ export function createContext(deps: {
     accounts: createAccountsRepository(deps.db),
     rehearsals,
     advisor,
+    research,
     engine: { kind: deps.engine.kind, model: deps.engine.model, provider: deps.provider ?? null, interviews: deps.engine.canInterview },
     webhooks,
     planOf,
@@ -139,6 +150,7 @@ export function createContext(deps: {
         hooks: createWebhooksRepository(deps.db, userId),
         rehearsals,
         advisor,
+        research,
         planOf,
         ownPlan: () => deps.db.get<{ plan: string }>('SELECT plan FROM users WHERE id = ?', userId)?.plan ?? 'free',
         usedThisMonth: (project) => {

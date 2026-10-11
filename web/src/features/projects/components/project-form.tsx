@@ -100,7 +100,7 @@ export function ProjectForm({ id, initial, error, onSubmit, footer }: { id: stri
         <div className="grid gap-5 sm:grid-cols-2">
           <Field>
             <FieldLabel htmlFor={`${id}-personas`}>Followers per rehearsal</FieldLabel>
-            <Input id={`${id}-personas`} type="number" min={2} max={limits?.maxPersonas ?? 30} value={v.personas} onChange={(e) => set('personas', Number(e.target.value))} />
+            <Input id={`${id}-personas`} type="number" min={2} max={Math.min(limits?.maxPersonas ?? 30, 30)} value={v.personas} onChange={(e) => set('personas', Number(e.target.value))} />
             <FieldDescription>2 to 30. More followers, more model calls.</FieldDescription>
           </Field>
           <Field>

@@ -8,7 +8,7 @@
  *   });
  *   const r = await rehearsals.start(projectId, { ref: { text: 'My post' }, settings: { platform: 'linkedin' } });
  */
-export { createRehearsals, RehearsalError, DEFAULT_LIMITS, DEFAULT_SETTINGS } from './core.ts';
+export { createRehearsals, RehearsalError, DEFAULT_LIMITS, DEFAULT_SETTINGS, brandOf } from './core.ts';
 export { calibrate, mixMatch, type Calibration } from './calibration.ts';
 export type { Rehearsals, StartRequest, Limits, CreateRehearsalsOptions, RehearsalErrorCode } from './core.ts';
 export { swarmEngine, DEFAULT_AUDIENCE, draftOf } from './swarm/index.ts';
@@ -36,3 +36,9 @@ export { ADVISOR_AGENTS, AGENTS_AT } from './advisor/agents.ts';
 export { STUDIO_AGENTS, type StudioAgent } from './swarm/crew.ts';
 export type { AdvisorAgent } from './advisor/agents.ts';
 export * from './advisor/types.ts';
+export { createResearch, DEFAULT_RESEARCH_LIMITS } from './research/service.ts';
+export type { Research, ResearchLimits, CreateResearchOptions } from './research/service.ts';
+export { sqliteStudyStore, memoryStudyStore, STUDIES_SQL } from './research/store.ts';
+export { RESEARCH_AGENTS, AGENT_FOR } from './research/agents.ts';
+export type { ResearchAgent } from './research/agents.ts';
+export * from './research/types.ts';

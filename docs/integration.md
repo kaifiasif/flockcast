@@ -66,6 +66,22 @@ Ready clients, copy one into your app: `examples/http-client/flockcast-client.ts
 
 As a library: `createAdvisor({ store: sqliteAdviceStore(db), agents: pythonAgents({ llm: llmFromEnv() }), sources: searchSourcesFromEnv() })`, then `advisor.start(scope, { product, pitch })`. The table is `ADVICE_SQL`.
 
+### Research studies
+
+Focus groups, message tests and crisis rehearsals need the Enterprise plan when plans are on (403 `PLAN_REQUIRED` otherwise). Each project starts up to `STUDIES_PER_PROJECT_PER_DAY` a day.
+
+| Endpoint | Does |
+|---|---|
+| `POST /api/v1/studies` | Starts a study and answers 202. Body by `kind`: `focus_group` with `topic`, `material`, `questions` (1 to 5), `segments` (1 to 4 `{ name, about }`), `panelists` (4 to 12); `message_test` with `messages` (2 to 4 `{ label, text }`), `segments` (up to 5), `per_segment` (2 to 10), optional `goal`; `crisis` with `situation`, `statement`, `stakeholders` (`customers`, `press`, `critics`, `employees`, `investors`, `regulators`) and `rounds` (1 or 2) |
+| `GET /api/v1/studies?kind=` | Recent studies, newest first, without results |
+| `GET /api/v1/studies/:id` | One study, with `status` (`queued`, `preparing`, `running`, `reporting`, `done`, `failed`) and, when done, `result` keyed on `kind` |
+
+The web app uses the same shapes under `/api/projects/:id/studies`, plus `DELETE …/studies/:sid` (not while it runs).
+
+### Brand rules
+
+`PUT /api/projects/:id/brand` with `{ voice, banned: [...], required: [...], notes }` (owner, Studio plan). Empty rules clear them. While set, every finished rehearsal has `result.brand`: `{ ok, issues: [{ rule, level: "risk" | "warn", detail, quote }], voice }`, and each message test version has its own `brand` issues. Banned words match whole words only.
+
 ### Teams, sign-off and webhooks
 
 These are app routes under `/api`, used by the web app with a session cookie. A stranger's project answers 404; a member whose role does not allow an action gets 403 `FORBIDDEN`; a plan that lacks a feature gets 403 `PLAN_REQUIRED`.

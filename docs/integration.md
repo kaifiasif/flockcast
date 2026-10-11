@@ -10,6 +10,8 @@ There are two ways in. Pick by where your text lives.
 | Results live in | Flockcast's database | Your database, through a store adapter |
 | Good for | Scripts, CI, apps in any language, a quick start | Apps that want rehearsal inside their own UI and data model |
 
+An AI assistant can also use a Flockcast server through the MCP server in `mcp/` (section 3), which wraps the HTTP API.
+
 Flockcast does not depend on any app. Any app can use either way in; `examples/creator-os/` shows both for one real app.
 
 ## 1. HTTP API
@@ -187,6 +189,36 @@ await rehearsals.start(scope, { source: 'posts', ref: { post_id: 'p_123' } });
 Implement `Store` from `engine/types.ts`: `insert`, `update(scope, id, patch)`, `get`, `latest`, `list`, `countSince`, `remove`, `failStale`. Every method except `insert` and `failStale` takes the scope and must filter by it. `engine/stores/memory.ts` is the shortest reference (about 40 lines). For SQLite, copy `rehearsalsSql('your_table')` into a migration, or call `ensureRehearsalsTable(db, { table })` at boot.
 
 Call `rehearsals.recover()` once at boot: rehearsals left running by a crash are marked failed with a message, instead of spinning forever.
+
+## 3. MCP server, for AI assistants
+
+`mcp/flockcast_mcp.py` lets Claude Desktop, Claude Code, Cursor or any MCP client rehearse while it writes. It speaks MCP over stdio, needs only Python 3.10+, and calls `/api/v1` with one project key, so the assistant can reach that project and nothing else. Run it on your own machine, next to the assistant.
+
+```json
+{
+  "mcpServers": {
+    "flockcast": {
+      "command": "python3",
+      "args": ["/path/to/flockcast/mcp/flockcast_mcp.py"],
+      "env": { "FLOCKCAST_URL": "https://your-flockcast.example", "FLOCKCAST_KEY": "flk_..." }
+    }
+  }
+}
+```
+
+In Claude Code: `claude mcp add flockcast -e FLOCKCAST_URL=... -e FLOCKCAST_KEY=flk_... -- python3 /path/to/flockcast/mcp/flockcast_mcp.py`.
+
+| Tool | Does |
+|---|---|
+| `rehearse_post` | Rehearses a post and waits for the result (pushback, fixes, checks, persona ids) |
+| `ask_follower` | Asks one simulated follower a question (needs a model key on the server) |
+| `compare_drafts` | Two or three drafts on one crowd, with `crowd_pick` |
+| `record_outcome`, `calibration` | Real numbers after posting, and how close rehearsals have come |
+| `focus_group`, `message_test`, `crisis_rehearsal` | The research studies |
+| `launch_advice` | The launch crew's research, price and plan |
+| `get_rehearsal`, `get_study`, `get_advice` | Read a run by id |
+
+Tools wait up to 150 seconds; a longer run comes back with its id and a note to check it with the matching `get_` tool. Plans, caps and roles apply exactly as they do for the HTTP API.
 
 ## Worked example: Creator OS
 

@@ -129,6 +129,7 @@ Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or gene
 Flockcast is standalone: it does not depend on any other app, and any app can use it. See [docs/integration.md](docs/integration.md). In short:
 
 - **Over HTTP, from any language**: make a project and a key in the app, then call `/api/v1` with `Authorization: Bearer flk_...`. Ready clients: `examples/http-client/flockcast-client.ts` (TypeScript) and `examples/http-client/flockcast_client.py` (Python, standard library only). Both cover rehearsals, follower questions and launch advice.
+- **From an AI assistant**: `mcp/flockcast_mcp.py` is an MCP server (Python, standard library only) that gives Claude, Cursor and other assistants tools to rehearse posts, compare drafts, run focus groups, message tests and crisis rehearsals, and ask for launch advice, all through one project key.
 - **As a library, in a Node app**: `createRehearsals({ store, engine, sources })` and `createAdvisor({ store, llm, search })` with your own adapters. `examples/custom-source/posts-table.ts` is a template for reading drafts from your own database.
 
 `examples/creator-os/` is one worked example of both modes, for Creator OS. Nothing outside that folder knows about it.

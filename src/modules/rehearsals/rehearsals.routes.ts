@@ -3,13 +3,13 @@ import type { RehearsalSettings, Rehearsals } from '../../../engine/index.ts';
 import type { Project } from '../../db/repositories/projects.repository.ts';
 import { router } from '../../http/types.ts';
 import { validate } from '../../http/validate.ts';
-import { requireFeature } from '../../core/plans.ts';
+import { requireFeature, type Plan } from '../../core/plans.ts';
 import { checkRehearsalPlan, ownProject } from '../projects/access.ts';
 import { IdParam, InterviewInput, ListQuery, ProjectRehearsalParam, RehearsalInput } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
 
-/** The project's saved setup, with any one-off changes from the request on top. */
-export function settingsFor(project: Project, body: Partial<z.infer<typeof RehearsalInput>>): Partial<RehearsalSettings> {
+/** The project's saved setup, with any one-off changes from the request on top. Brand rules apply while the plan has them. */
+export function settingsFor(project: Project, body: Partial<z.infer<typeof RehearsalInput>>, plan: Plan): Partial<RehearsalSettings> {
   return {
     platform: body.platform ?? project.platform,
     handle: project.handle,
@@ -18,15 +18,16 @@ export function settingsFor(project: Project, body: Partial<z.infer<typeof Rehea
     rounds: body.rounds ?? project.rounds,
     critic: body.critic,
     mode: body.mode,
+    brand: plan.features.includes('brand') ? project.brand : null,
   };
 }
 
-export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof RehearsalInput>) {
+export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof RehearsalInput>, plan: Plan) {
   return engineCall(() =>
     rehearsals.start(project.id, {
       source: 'text',
       ref: { text: body.text, title: body.title, subject: body.subject },
-      settings: settingsFor(project, body),
+      settings: settingsFor(project, body, plan),
       force: body.force,
     }),
   );
@@ -49,8 +50,9 @@ export function rehearsalsRoutes() {
       const ctx = c.var.ctx;
       const project = ownProject(ctx, c.req.valid('param').id, 'edit');
       const body = c.req.valid('json');
-      checkRehearsalPlan(ctx.planOf(project), ctx.usedThisMonth(project), body, project);
-      const rehearsal = await startFor(ctx.rehearsals, project, body);
+      const plan = ctx.planOf(project);
+      checkRehearsalPlan(plan, ctx.usedThisMonth(project), body, project);
+      const rehearsal = await startFor(ctx.rehearsals, project, body, plan);
       ctx.audit(project, 'rehearsal.started', rehearsal.id, { title: rehearsal.title });
       return c.json({ rehearsal }, 202);
     })

@@ -22,6 +22,7 @@ const ComparePage = lazy(() => import('@/features/compare/compare-page').then((m
 const ComparisonPage = lazy(() => import('@/features/compare/comparison-page').then((m) => ({ default: m.ComparisonPage })));
 const JoinPage = lazy(() => import('@/features/team/join-page').then((m) => ({ default: m.JoinPage })));
 const AdvicePage = lazy(() => import('@/features/advice/advice-page').then((m) => ({ default: m.AdvicePage })));
+const StudyPage = lazy(() => import('@/features/research/study-page').then((m) => ({ default: m.StudyPage })));
 const AccountPage = lazy(() => import('@/features/account/account-page').then((m) => ({ default: m.AccountPage })));
 
 const INVITE_KEY = 'flockcast.invite';
@@ -56,6 +57,8 @@ function Screen({ route }: { route: Route }) {
       return <ComparisonPage id={route.id} gid={route.gid} key={route.gid} />;
     case 'advice':
       return <AdvicePage id={route.id} aid={route.aid} key={route.aid} />;
+    case 'study':
+      return <StudyPage id={route.id} sid={route.sid} key={route.sid} />;
     case 'account':
       return <AccountPage />;
     case 'join':

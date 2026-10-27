@@ -8,11 +8,13 @@
  * The art is static markup with no user input in it, so the component renders it as SVG markup, and
  * `npm run stickers` writes the same art to standalone SVG and PNG sticker files.
  */
-export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops' | AgentVariant | StudioVariant;
+export type PipVariant = 'plain' | 'skeptic' | 'fan' | 'newcomer' | 'listener' | 'caster' | 'analyst' | 'sleepy' | 'oops' | AgentVariant | StudioVariant | ResearchVariant;
 /** The launch advisor's crew: one sticker per agent, named in engine/advisor/agents.ts. */
 export type AgentVariant = 'scout' | 'professor' | 'murmur' | 'baron' | 'captain';
 /** The studio crew that helps fix a post, named in engine/swarm/crew.ts. */
 export type StudioVariant = 'sniffer' | 'editor' | 'contrarian' | 'herald' | 'wren';
+/** The research crew: focus groups, message tests, crisis rehearsals and brand rules. */
+export type ResearchVariant = 'moderator' | 'pollster' | 'steady' | 'guardian';
 
 interface Parts {
   /** drawn over the body, inside the sticker edge: hats, glasses, props */
@@ -131,6 +133,27 @@ export const PIP_VARIANTS: Record<PipVariant, Parts & { label: string; blurb: st
     blurb: 'A quick read in one pass.',
     front: `<path d="M36 32 c0 -22 48 -22 48 0z" fill="#F2B15F"/><path d="M84 31 q14 0 18 6 q-12 -1 -18 -1z" fill="#C98B2E"/><circle cx="60" cy="12" r="3" fill="#C98B2E"/><circle cx="94" cy="84" r="11" fill="#FBFAF9" stroke="${INK}" stroke-width="2.6"/><rect x="91" y="69" width="6" height="4" rx="1" fill="${INK}"/><path d="M94 84 v-6 M94 84 l4 3" stroke="#E4544B" stroke-width="2" stroke-linecap="round"/>`,
     loose: `<path d="M2 56 h12 M0 66 h16 M4 76 h10" stroke="#C9443A" stroke-width="2.4" stroke-linecap="round"/>`,
+  },
+  moderator: {
+    label: 'Moderator Maple',
+    blurb: 'Runs your focus group and writes up the themes.',
+    front: `<path d="M32 30 q4 -16 28 -16 q26 0 30 14 q-28 6 -58 2z" fill="#B4532A"/><circle cx="62" cy="13" r="3" fill="#8E3F1F"/><g transform="rotate(12 96 84)"><rect x="84" y="70" width="24" height="30" rx="3" fill="#C98B2E"/><rect x="87" y="75" width="18" height="22" rx="1.5" fill="#FBFAF9"/><rect x="91" y="67" width="10" height="6" rx="2" fill="${INK}"/><path d="M90 81 h12 M90 86 h12 M90 91 h8" stroke="#A8A29E" stroke-width="1.6"/></g>`,
+  },
+  pollster: {
+    label: 'Tally the Pollster',
+    blurb: 'Scores every version with every group.',
+    front: `<path d="M34 32 c0 -20 52 -20 52 0z" fill="#4F7A5A"/><path d="M34 31 q-12 1 -14 6 q10 -1 16 -2z" fill="#3E6147"/><circle cx="60" cy="14" r="3" fill="#3E6147"/><g transform="rotate(-8 96 84)"><rect x="82" y="70" width="30" height="26" rx="4" fill="#FBFAF9" stroke="#D6D3D1" stroke-width="1.4"/><rect x="87" y="84" width="5" height="8" fill="#A8A29E"/><rect x="94.5" y="77" width="5" height="15" fill="#E4544B"/><rect x="102" y="81" width="5" height="11" fill="#F2B15F"/></g>`,
+  },
+  steady: {
+    label: 'Juniper the Steady',
+    blurb: 'Rehearses your statement before a hard moment.',
+    front: `<path d="M34 33 c-2 -24 54 -24 52 0z" fill="#1F3A5F"/><rect x="33" y="28" width="54" height="7" rx="3.5" fill="#2E4E7A"/><circle cx="60" cy="10" r="4" fill="#2E4E7A"/><g transform="rotate(6 98 84)"><path d="M92 98 l3 -24 h8 l3 24z" fill="#FBFAF9" stroke="#D6D3D1" stroke-width="1.2"/><path d="M93.2 88 h11.6 M94.2 80 h9.6" stroke="#E4544B" stroke-width="3"/><rect x="93" y="68" width="12" height="6" rx="1" fill="#F2B15F"/><path d="M92 68 l7 -5 l7 5z" fill="${INK}"/></g>`,
+    loose: `<path d="M110 64 l11 -6 M110 71 h12" stroke="#F2B15F" stroke-width="2.2" stroke-linecap="round"/>`,
+  },
+  guardian: {
+    label: 'Ivy the Guardian',
+    blurb: 'Keeps every draft inside your brand rules.',
+    front: `<path d="M38 30 q-6 -10 2 -16 q4 8 -2 16z M50 26 q-4 -12 4 -16 q4 10 -4 16z M70 26 q4 -12 -4 -16 q-4 10 4 16z M82 30 q6 -10 -2 -16 q-4 8 2 16z" fill="#4F7A5A"/><path d="M34 32 q26 -8 52 0" stroke="#3E6147" stroke-width="2.4" fill="none"/><g transform="rotate(-6 96 84)"><path d="M84 70 h24 v12 q0 12 -12 18 q-12 -6 -12 -18z" fill="#4F7A5A" stroke="#3E6147" stroke-width="1.4"/><path d="M90 84 l4 4 l8 -9" stroke="#FBFAF9" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/></g>`,
   },
 };
 

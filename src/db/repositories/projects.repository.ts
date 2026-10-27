@@ -1,3 +1,4 @@
+import type { BrandRules } from '../../../engine/index.ts';
 import type { Database } from '../client.ts';
 
 export interface Example {
@@ -26,16 +27,19 @@ export interface Project {
   role: Role;
   /** The owner's plan id; a project's features follow it. */
   owner_plan: string;
+  /** Brand rules every rehearsal is checked against, or null. */
+  brand: BrandRules | null;
 }
 
-interface Row extends Omit<Project, 'examples'> {
+interface Row extends Omit<Project, 'examples' | 'brand'> {
   examples_json: string;
+  brand_json: string | null;
 }
 
-export type ProjectFields = Omit<Project, 'id' | 'created_at' | 'updated_at' | 'role' | 'owner_plan'>;
+export type ProjectFields = Omit<Project, 'id' | 'created_at' | 'updated_at' | 'role' | 'owner_plan' | 'brand'>;
 
-const COLUMNS = 'id, name, description, platform, handle, audience, examples_json, personas, rounds, created_at, updated_at';
-const fromRow = ({ examples_json, ...r }: Row): Project => ({ ...r, examples: JSON.parse(examples_json) as Example[] });
+const COLUMNS = 'id, name, description, platform, handle, audience, examples_json, personas, rounds, created_at, updated_at, brand_json';
+const fromRow = ({ examples_json, brand_json, ...r }: Row): Project => ({ ...r, examples: JSON.parse(examples_json) as Example[], brand: brand_json ? (JSON.parse(brand_json) as BrandRules) : null });
 
 // a project the user owns, or one they were added to; nothing else matches
 const VISIBLE = `FROM projects p JOIN users o ON o.id = p.user_id LEFT JOIN project_members m ON m.project_id = p.id AND m.user_id = ?
@@ -78,6 +82,9 @@ export function createProjectsRepository(db: Database, userId: string) {
         p.name, p.description, p.platform, p.handle, p.audience, JSON.stringify(p.examples), p.personas, p.rounds, at, id, userId,
       );
       return changes === 1;
+    },
+    setBrand(id: string, brand: BrandRules | null, at: string): boolean {
+      return db.run('UPDATE projects SET brand_json = ?, updated_at = ? WHERE id = ? AND user_id = ?', brand ? JSON.stringify(brand) : null, at, id, userId).changes === 1;
     },
     remove(id: string): boolean {
       return db.run('DELETE FROM projects WHERE id = ? AND user_id = ?', id, userId).changes === 1;

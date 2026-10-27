@@ -10,6 +10,7 @@ import { createRateLimiter, rateLimit } from '../../http/middleware/rate-limit.t
 import { checkRehearsalPlan } from '../projects/access.ts';
 import { validate } from '../../http/validate.ts';
 import { AdviceInput, AdviceListQuery } from '../advice/advice.schemas.ts';
+import { StudyInput, StudyListQuery } from '../research/research.schemas.ts';
 import { hashApiKey, looksLikeApiKey } from '../projects/projects.routes.ts';
 import { CompareInput, IdParam, InterviewInput, ListQuery, OutcomeInput, RehearsalInput } from '../projects/projects.schemas.ts';
 import { compareFor, groupFor } from './comparisons.routes.ts';
@@ -64,8 +65,9 @@ export function apiV1Routes(app: AppServices) {
     .get('/rehearsals', validate('query', ListQuery), (c) => c.json({ rehearsals: listFor(app.rehearsals, c.var.project.id, c.req.valid('query')) }))
     .post('/rehearsals', validate('json', RehearsalInput), async (c) => {
       const body = c.req.valid('json');
-      checkRehearsalPlan(app.planOf(c.var.project), used(c.var.project), body, c.var.project);
-      const rehearsal = await startFor(app.rehearsals, c.var.project, body);
+      const plan = app.planOf(c.var.project);
+      checkRehearsalPlan(plan, used(c.var.project), body, c.var.project);
+      const rehearsal = await startFor(app.rehearsals, c.var.project, body, plan);
       app.audit(c.var.project.id, actor(c), 'rehearsal.started', rehearsal.id, { title: rehearsal.title });
       return c.json({ rehearsal }, 202);
     })
@@ -85,7 +87,7 @@ export function apiV1Routes(app: AppServices) {
       const plan = app.planOf(c.var.project);
       requireFeature(plan, 'compare');
       checkRehearsalPlan(plan, used(c.var.project), body, c.var.project, body.drafts.length);
-      const rehearsals = await compareFor(app.rehearsals, c.var.project, body);
+      const rehearsals = await compareFor(app.rehearsals, c.var.project, body, plan);
       return c.json({ group_id: rehearsals[0].group_id!, rehearsals }, 202);
     })
     .get('/comparisons/:id', validate('param', IdParam), (c) => c.json({ group_id: c.req.valid('param').id, rehearsals: groupFor(app.rehearsals, c.var.project.id, c.req.valid('param').id) }))
@@ -93,6 +95,15 @@ export function apiV1Routes(app: AppServices) {
     .get('/advice', validate('query', AdviceListQuery), (c) => c.json({ advice: app.advisor.list(c.var.project.id, c.req.valid('query')) }))
     .post('/advice', validate('json', AdviceInput), async (c) => (requireFeature(app.planOf(c.var.project), 'advisor'), c.json({ advice: await engineCall(() => app.advisor.start(c.var.project.id, c.req.valid('json'))) }, 202)))
     .get('/advice/:id', validate('param', IdParam), async (c) => c.json({ advice: await engineCall(() => app.advisor.get(c.var.project.id, c.req.valid('param').id)) }))
+    .get('/studies', validate('query', StudyListQuery), (c) => c.json({ studies: app.research.list(c.var.project.id, c.req.valid('query')) }))
+    .post('/studies', validate('json', StudyInput), async (c) => {
+      const plan = app.planOf(c.var.project);
+      requireFeature(plan, 'research');
+      const study = await engineCall(() => app.research.start(c.var.project.id, c.req.valid('json'), { brand: plan.features.includes('brand') ? c.var.project.brand : null }));
+      app.audit(c.var.project.id, actor(c), 'study.started', study.id, { kind: study.kind, title: study.title });
+      return c.json({ study }, 202);
+    })
+    .get('/studies/:id', validate('param', IdParam), async (c) => c.json({ study: await engineCall(() => app.research.get(c.var.project.id, c.req.valid('param').id)) }))
     .all('*', () => {
       throw notFound('Endpoint');
     });

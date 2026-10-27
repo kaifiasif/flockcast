@@ -30,6 +30,10 @@ const ACTIONS: Record<string, string> = {
   'approval.withdrawn': 'withdrew an approval request',
   'webhook.created': 'added a webhook',
   'webhook.deleted': 'deleted a webhook',
+  'study.started': 'started a study',
+  'study.deleted': 'deleted a study',
+  'brand.updated': 'changed the brand rules',
+  'brand.cleared': 'cleared the brand rules',
 };
 
 const apiBase = (id: string) => `/api/projects/${id}`;

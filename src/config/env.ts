@@ -47,6 +47,7 @@ const EnvSchema = z
     /** Lets webhooks reach private and local addresses (and plain http). Only for testing on your own machine. */
     WEBHOOKS_ALLOW_PRIVATE: flag('0'),
     ADVICE_PER_PROJECT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(5),
+    STUDIES_PER_PROJECT_PER_DAY: z.coerce.number().int().min(1).max(1000).default(10),
   })
   .refine((e) => e.REHEARSAL_ENGINE !== 'mirofish' || e.MIROFISH_URL, { message: 'MIROFISH_URL is required with REHEARSAL_ENGINE=mirofish', path: ['MIROFISH_URL'] })
   .refine((e) => e.REHEARSAL_LLM_PROVIDER !== 'custom' || (e.REHEARSAL_LLM_BASE_URL && e.REHEARSAL_LLM_MODEL), {
@@ -79,7 +80,7 @@ export interface AppConfig {
   /** Whether plans gate features; off means everyone is on Enterprise. */
   plans: boolean;
   webhooks: { allowPrivate: boolean };
-  limits: { rehearsalsPerSubjectPerDay: number; interviewsPerRehearsal: number; advicePerProjectPerDay: number };
+  limits: { rehearsalsPerSubjectPerDay: number; interviewsPerRehearsal: number; advicePerProjectPerDay: number; studiesPerProjectPerDay: number };
   rateLimits: {
     /** every API call */
     api: RateLimit;
@@ -107,7 +108,7 @@ export function configFromEnv(env: Env): AppConfig {
     trustProxy: env.TRUST_PROXY,
     plans: env.FLOCKCAST_PLANS === 'on',
     webhooks: { allowPrivate: env.WEBHOOKS_ALLOW_PRIVATE },
-    limits: { rehearsalsPerSubjectPerDay: env.REHEARSALS_PER_SUBJECT_PER_DAY, interviewsPerRehearsal: env.INTERVIEWS_PER_REHEARSAL, advicePerProjectPerDay: env.ADVICE_PER_PROJECT_PER_DAY },
+    limits: { rehearsalsPerSubjectPerDay: env.REHEARSALS_PER_SUBJECT_PER_DAY, interviewsPerRehearsal: env.INTERVIEWS_PER_REHEARSAL, advicePerProjectPerDay: env.ADVICE_PER_PROJECT_PER_DAY, studiesPerProjectPerDay: env.STUDIES_PER_PROJECT_PER_DAY },
     rateLimits: DEFAULT_RATE_LIMITS,
   };
 }

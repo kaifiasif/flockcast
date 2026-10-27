@@ -4,6 +4,7 @@ documented workflow, not its code. The Node server hands over the post, the sett
 this returns the result and the state interviews need later.
 """
 from ..jsnum import js_round, to_fixed
+from ..research.brand import brand_check
 from ..studio.editor import fixes
 from ..studio.norms import platform_checks
 from ..studio.quick import quick_read
@@ -57,6 +58,8 @@ def _studio(llm, posts, draft, summary, settings, platform, on_stage):
     out["fixes"] = attempt("fixes", lambda: fixes(llm, summary, out["ai_check"] or {"flags": []}, platform, settings["handle"]), [])
     on_stage("reporting", 96)
     out["reply_prep"] = attempt("reply_prep", lambda: reply_prep(llm, draft, summary, platform, settings["handle"]), [])
+    if settings.get("brand"):
+        out["brand"] = attempt("brand", lambda: brand_check(llm, draft, settings["brand"]), None)
     if errors:
         out["studio_errors"] = errors
     return out

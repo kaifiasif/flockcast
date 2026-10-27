@@ -21,6 +21,7 @@ export function systemRoutes(app: AppServices) {
       defaults: app.rehearsals.defaults,
       signup: app.config.signup,
       studio: { agents: STUDIO_AGENTS, modes: app.engine.kind === 'mirofish' ? ['crowd'] : ['crowd', 'quick'] },
+      research: { mode: app.research.mode, agents: app.research.agents, limits: app.research.limits },
       advisor: { mode: app.advisor.mode, sources: app.advisor.sources, agents: app.advisor.agents, limits: app.advisor.limits },
     }),
   );

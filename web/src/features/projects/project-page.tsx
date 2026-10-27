@@ -6,6 +6,7 @@ import { QueryView } from '@/components/shared/query-view';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { AdvisorPanel } from '@/features/advice/advisor-panel';
+import { ResearchPanel } from '@/features/research/research-panel';
 import { RehearsalList } from '@/features/rehearsals/rehearsal-list';
 import { cn } from '@/lib/utils';
 import { useAppConfig, useProject } from './api';
@@ -19,6 +20,7 @@ import { WebhooksPanel } from '@/features/team/webhooks-panel';
 const TABS: { tab: ProjectTab; label: string; owner?: boolean }[] = [
   { tab: 'rehearsals', label: 'Rehearsals' },
   { tab: 'advisor', label: 'Launch advisor' },
+  { tab: 'research', label: 'Research' },
   { tab: 'team', label: 'Team' },
   { tab: 'setup', label: 'Crowd and setup', owner: true },
   { tab: 'keys', label: 'API and webhooks', owner: true },
@@ -81,6 +83,7 @@ export function ProjectPage({ id, tab }: { id: string; tab: ProjectTab }) {
               </nav>
               {tab === 'rehearsals' && <RehearsalList project={p} />}
               {tab === 'advisor' && <AdvisorPanel project={p} />}
+              {tab === 'research' && <ResearchPanel project={p} />}
               {tab === 'setup' && p.role === 'owner' && <SetupPanel project={p} />}
               {tab === 'keys' && p.role === 'owner' && (
                 <div className="grid gap-10">

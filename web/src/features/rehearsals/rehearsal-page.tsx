@@ -23,6 +23,7 @@ import { isActive, useDeleteRehearsal, useRehearsal, useStartRehearsal } from '.
 import { OutcomePanel } from '@/features/compare/outcome-panel';
 import { AskFollower } from './ask-follower';
 import { AiCheck, CrowdWarning, Fixes, PlatformChecks, ReplyPrep } from './studio-notes';
+import { BrandNotes } from '@/features/research/brand-notes';
 import { engineLabel, STAGE } from './labels';
 
 function Running({ r }: { r: Rehearsal }) {
@@ -166,8 +167,9 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
         </section>
       </div>
 
-      {(x.ai_check || x.checks) && (
+      {(x.ai_check || x.checks || x.brand) && (
         <div className="grid items-start gap-6 lg:grid-cols-2">
+          <BrandNotes x={x} />
           <AiCheck x={x} />
           <PlatformChecks x={x} platformName={platform?.id === 'generic' ? 'Platform' : (platform?.name ?? 'Platform')} />
         </div>

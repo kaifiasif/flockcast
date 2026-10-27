@@ -24,6 +24,28 @@ After the crowd reads your post, a crew of small agents helps you fix it. Each r
 
 Every rehearsal also checks the platform's rules: length, links, hashtags, the LinkedIn fold, engagement bait, all caps. The compose screen offers hard-to-reach crowds (enterprise buyers, investors, developers, journalists, Gen Z, regulated industries) as starting points.
 
+## Compare drafts and check against reality
+
+- **Compare drafts**: rehearse two or three versions of a post on one crowd. Draft A casts it; the same people, with the same luck, read the others, so differences come from the text. The page marks the crowd's pick.
+- **After you post**: enter the real likes, reposts, replies and quotes on a rehearsal. Flockcast compares how the reactions split (not how many, since a dozen simulated people cannot predict reach) and keeps score per project, including how often the crowd's pick in a comparison did best for real.
+
+## Teams, sign-off and plans
+
+- **Teams.** Invite people to a project with a one-time link (valid 7 days) as an editor (rehearses and asks for sign-off), reviewer (approves or asks for changes) or viewer (reads only). Only the owner changes the setup, keys, webhooks and members.
+- **Sign-off.** An editor asks for approval on a finished rehearsal; a reviewer or the owner approves it or asks for changes. Nobody approves their own request.
+- **Webhooks.** Up to five https endpoints per project get `rehearsal.finished`, `approval.requested` and `approval.decided`, signed with HMAC-SHA256 (see `docs/integration.md`).
+- **Usage, export and audit log.** Rehearsals this month, a CSV or JSON export, and a log of who started, approved, exported or changed what.
+- **Plans.** Free, Creator ($19), Studio ($49) and Enterprise each unlock more. Plans are off by default, so a self-hosted server has every feature. Set `FLOCKCAST_PLANS=on` to enforce them and change someone's plan with `npm run plan -- you@example.com studio`.
+
+## Research and brand rules
+
+- **Focus group** (Moderator Maple): a panel recruited from the groups you name, including hard-to-reach ones, answers up to five questions about your material. You get the transcript, warmth by group, themes with quotes, where they agreed and split, and what to change.
+- **Message test** (Tally the Pollster): two to four versions rated by each group for appeal, clarity and believability. Every group counts the same, so a large group cannot drown out a small one, and a split between groups is called out.
+- **Crisis rehearsal** (Juniper the Steady): customers, press, critics, employees, investors or regulators react to a holding statement, round by round. You get heat per group, the line each group will quote against you, checks for apology, ownership, deflection and next steps, and a revised statement that cannot add facts you did not give (invented numbers become `[fact]`).
+- **Brand rules** (Ivy the Guardian, Studio plan): a project's voice, banned words and required lines. Every rehearsal and message test is checked against them.
+
+Studies are a rehearsal of the conversation, not a survey or a forecast. Without a model key they run as a labelled offline estimate.
+
 ## Launch advisor
 
 Each project also has a **Launch advisor** for the product you are about to launch. Describe it in a few sentences and a crew of five agents does the rest, written for someone who has never priced or launched anything:
@@ -86,6 +108,9 @@ All optional; see `.env.example`.
 | `REHEARSAL_ENGINE` / `MIROFISH_URL` | `swarm` | `mirofish` uses a MiroFish server you run (see `sidecar/mirofish`) |
 | `REHEARSALS_PER_SUBJECT_PER_DAY` | `10` | Spend cap per draft |
 | `INTERVIEWS_PER_REHEARSAL` | `25` | Spend cap per rehearsal |
+| `STUDIES_PER_PROJECT_PER_DAY` | `10` | Spend cap on focus groups, message tests and crisis rehearsals per project |
+| `FLOCKCAST_PLANS` | `off` | `on` enforces Free, Creator, Studio and Enterprise limits per account; `off` gives everyone every feature |
+| `WEBHOOKS_ALLOW_PRIVATE` | off | Lets webhooks reach private and local addresses. For testing only |
 
 Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or generic), handle, audience segments, past posts (so the crowd is made of people who would follow you), crowd size and rounds.
 
@@ -104,6 +129,7 @@ Per project, in the app: platform (X, LinkedIn, Threads, Bluesky, Reddit or gene
 Flockcast is standalone: it does not depend on any other app, and any app can use it. See [docs/integration.md](docs/integration.md). In short:
 
 - **Over HTTP, from any language**: make a project and a key in the app, then call `/api/v1` with `Authorization: Bearer flk_...`. Ready clients: `examples/http-client/flockcast-client.ts` (TypeScript) and `examples/http-client/flockcast_client.py` (Python, standard library only). Both cover rehearsals, follower questions and launch advice.
+- **From an AI assistant**: `mcp/flockcast_mcp.py` is an MCP server (Python, standard library only) that gives Claude, Cursor and other assistants tools to rehearse posts, compare drafts, run focus groups, message tests and crisis rehearsals, and ask for launch advice, all through one project key.
 - **As a library, in a Node app**: `createRehearsals({ store, engine, sources })` and `createAdvisor({ store, llm, search })` with your own adapters. `examples/custom-source/posts-table.ts` is a template for reading drafts from your own database.
 
 `examples/creator-os/` is one worked example of both modes, for Creator OS. Nothing outside that folder knows about it.

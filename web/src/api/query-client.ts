@@ -21,8 +21,18 @@ export const queryKeys = {
   keys: (id: string) => ['projects', id, 'keys'] as const,
   rehearsals: (id: string) => ['projects', id, 'rehearsals'] as const,
   rehearsal: (id: string, rid: string) => ['projects', id, 'rehearsals', rid] as const,
+  comparison: (id: string, gid: string) => ['projects', id, 'comparisons', gid] as const,
+  calibration: (id: string) => ['projects', id, 'calibration'] as const,
   advice: (id: string) => ['projects', id, 'advice'] as const,
   adviceOne: (id: string, aid: string) => ['projects', id, 'advice', aid] as const,
+  studies: (id: string) => ['projects', id, 'studies'] as const,
+  study: (id: string, sid: string) => ['projects', id, 'studies', sid] as const,
+  members: (id: string) => ['projects', id, 'members'] as const,
+  approval: (id: string, rid: string) => ['projects', id, 'rehearsals', rid, 'approval'] as const,
+  approvals: (id: string) => ['projects', id, 'approvals'] as const,
+  webhooks: (id: string) => ['projects', id, 'webhooks'] as const,
+  audit: (id: string) => ['projects', id, 'audit'] as const,
+  usage: (id: string) => ['projects', id, 'usage'] as const,
 };
 
 /** Polls every `ms` while `isBusy(data)` says background work is still running. */

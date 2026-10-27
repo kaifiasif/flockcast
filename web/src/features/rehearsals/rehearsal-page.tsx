@@ -14,13 +14,16 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { Progress } from '@/components/ui/progress';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Spinner } from '@/components/ui/spinner';
-import { useAppConfig } from '@/features/projects/api';
+import { useAppConfig, useProject } from '@/features/projects/api';
+import { ApprovalPanel } from '@/features/team/approval-panel';
 import { BackTo } from '@/features/projects/project-page';
 import { formatDate, formatPercent, plural as count, verbPlural } from '@/lib/format';
 import { cn } from '@/lib/utils';
 import { isActive, useDeleteRehearsal, useRehearsal, useStartRehearsal } from './api';
+import { OutcomePanel } from '@/features/compare/outcome-panel';
 import { AskFollower } from './ask-follower';
 import { AiCheck, CrowdWarning, Fixes, PlatformChecks, ReplyPrep } from './studio-notes';
+import { BrandNotes } from '@/features/research/brand-notes';
 import { engineLabel, STAGE } from './labels';
 
 function Running({ r }: { r: Rehearsal }) {
@@ -137,6 +140,7 @@ function Replies({ x }: { x: RehearsalResult }) {
 function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
   const x = r.result!;
   const config = useAppConfig();
+  const project = useProject(projectId).data;
   const platform = config.data?.platforms.find((p) => p.id === x.platform);
   const verbs = platform?.verbs ?? { like: 'like', repost: 'repost', reply: 'reply', quote: 'quote' };
 
@@ -163,8 +167,9 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
         </section>
       </div>
 
-      {(x.ai_check || x.checks) && (
+      {(x.ai_check || x.checks || x.brand) && (
         <div className="grid items-start gap-6 lg:grid-cols-2">
+          <BrandNotes x={x} />
           <AiCheck x={x} />
           <PlatformChecks x={x} platformName={platform?.id === 'generic' ? 'Platform' : (platform?.name ?? 'Platform')} />
         </div>
@@ -179,6 +184,10 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
 
       <AskFollower rehearsal={r} projectId={projectId} />
 
+      {project && <ApprovalPanel r={r} project={project} />}
+
+      {project && (project.role === 'owner' || project.role === 'editor') && <OutcomePanel r={r} projectId={projectId} />}
+
       <p className="text-xs text-muted-foreground">
         {engineLabel(x)}
         {x.engine !== 'swarm-offline' && `, ${count(x.model_calls, 'model call')}`}. {x.mode === 'quick' ? `A quick read by ${x.agents} followers` : `${x.agents} followers over ${x.rounds ?? '?'} rounds`}, {x.total_actions} actions.{' '}
@@ -190,6 +199,8 @@ function Results({ r, projectId }: { r: Rehearsal; projectId: string }) {
 
 export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
   const rehearsal = useRehearsal(id, rid);
+  const role = useProject(id).data?.role;
+  const canEdit = role === 'owner' || role === 'editor';
   const start = useStartRehearsal(id);
   const remove = useDeleteRehearsal(id);
   const back = hrefOf({ name: 'project', id, tab: 'rehearsals' });
@@ -207,11 +218,11 @@ export function RehearsalPage({ id, rid }: { id: string; rid: string }) {
         {(r) => (
           <>
             <PageHeader
-              back={<BackTo href={back}>Rehearsals</BackTo>}
-              title={r.title}
+              back={r.group_id ? <BackTo href={hrefOf({ name: 'comparison', id, gid: r.group_id })}>Comparison</BackTo> : <BackTo href={back}>Rehearsals</BackTo>}
+              title={r.variant ? `Draft ${r.variant}: ${r.title}` : r.title}
               description={`${formatDate(r.created_at)}. ${r.settings.personas} followers, ${r.settings.mode === 'quick' ? 'quick read' : `${r.settings.rounds} rounds`}${r.result ? `, ${engineLabel(r.result)}` : ''}.`}
               actions={
-                !isActive(r) && (
+                !isActive(r) && canEdit && (
                   <>
                   {r.status === 'done' && (
                     <Button variant="outline" asChild>

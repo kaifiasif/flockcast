@@ -37,6 +37,8 @@ function main(): void {
   if (interrupted) log.warn('rehearsals_interrupted', { count: interrupted });
   const cutOff = app.advisor.recover();
   if (cutOff) log.warn('advice_interrupted', { count: cutOff });
+  const stopped = app.research.recover();
+  if (stopped) log.warn('studies_interrupted', { count: stopped });
   if (!LOCAL_HOSTS.has(host) && !app.config.secureCookies) {
     // session cookies sent over plain http can be read on the network
     log.warn('insecure_cookies', { host, hint: 'Serve over HTTPS with NODE_ENV=production so session cookies are Secure.' });

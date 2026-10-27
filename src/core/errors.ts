@@ -15,6 +15,8 @@ export const ErrorCode = {
   WRONG_CREDENTIALS: 'WRONG_CREDENTIALS',
   SIGNUP_CLOSED: 'SIGNUP_CLOSED',
   FORBIDDEN: 'FORBIDDEN',
+  /** the project's plan does not include this feature, or a plan limit was reached */
+  PLAN_REQUIRED: 'PLAN_REQUIRED',
   NOT_FOUND: 'NOT_FOUND',
   INVALID_STATE: 'INVALID_STATE',
   PAYLOAD_TOO_LARGE: 'PAYLOAD_TOO_LARGE',

@@ -3,12 +3,13 @@ import type { RehearsalSettings, Rehearsals } from '../../../engine/index.ts';
 import type { Project } from '../../db/repositories/projects.repository.ts';
 import { router } from '../../http/types.ts';
 import { validate } from '../../http/validate.ts';
-import { ownProject } from '../projects/projects.routes.ts';
+import { requireFeature, type Plan } from '../../core/plans.ts';
+import { checkRehearsalPlan, ownProject } from '../projects/access.ts';
 import { IdParam, InterviewInput, ListQuery, ProjectRehearsalParam, RehearsalInput } from '../projects/projects.schemas.ts';
 import { engineCall } from './rehearsal-errors.ts';
 
-/** The project's saved setup, with any one-off changes from the request on top. */
-export function settingsFor(project: Project, body: Partial<z.infer<typeof RehearsalInput>>): Partial<RehearsalSettings> {
+/** The project's saved setup, with any one-off changes from the request on top. Brand rules apply while the plan has them. */
+export function settingsFor(project: Project, body: Partial<z.infer<typeof RehearsalInput>>, plan: Plan): Partial<RehearsalSettings> {
   return {
     platform: body.platform ?? project.platform,
     handle: project.handle,
@@ -17,15 +18,16 @@ export function settingsFor(project: Project, body: Partial<z.infer<typeof Rehea
     rounds: body.rounds ?? project.rounds,
     critic: body.critic,
     mode: body.mode,
+    brand: plan.features.includes('brand') ? project.brand : null,
   };
 }
 
-export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof RehearsalInput>) {
+export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer<typeof RehearsalInput>, plan: Plan) {
   return engineCall(() =>
     rehearsals.start(project.id, {
       source: 'text',
       ref: { text: body.text, title: body.title, subject: body.subject },
-      settings: settingsFor(project, body),
+      settings: settingsFor(project, body, plan),
       force: body.force,
     }),
   );
@@ -33,7 +35,7 @@ export function startFor(rehearsals: Rehearsals, project: Project, body: z.infer
 
 /** Callers filter by their own subject; the text source stores it as "ref:<subject>". */
 export function listFor(rehearsals: Rehearsals, projectId: string, query: z.infer<typeof ListQuery>) {
-  return rehearsals.list(projectId, { limit: query.limit, subject: query.subject ? `ref:${query.subject}` : undefined });
+  return rehearsals.list(projectId, { limit: query.limit, group: query.group, subject: query.subject ? `ref:${query.subject}` : undefined });
 }
 
 /** Rehearsals for the signed-in user's projects. The project is checked first; the engine is scoped by its id. */
@@ -46,8 +48,12 @@ export function rehearsalsRoutes() {
     })
     .post('/projects/:id/rehearsals', validate('param', IdParam), validate('json', RehearsalInput), async (c) => {
       const ctx = c.var.ctx;
-      const project = ownProject(ctx, c.req.valid('param').id);
-      const rehearsal = await startFor(ctx.rehearsals, project, c.req.valid('json'));
+      const project = ownProject(ctx, c.req.valid('param').id, 'edit');
+      const body = c.req.valid('json');
+      const plan = ctx.planOf(project);
+      checkRehearsalPlan(plan, ctx.usedThisMonth(project), body, project);
+      const rehearsal = await startFor(ctx.rehearsals, project, body, plan);
+      ctx.audit(project, 'rehearsal.started', rehearsal.id, { title: rehearsal.title });
       return c.json({ rehearsal }, 202);
     })
     .get('/projects/:id/rehearsals/:rid', validate('param', ProjectRehearsalParam), async (c) => {
@@ -59,14 +65,15 @@ export function rehearsalsRoutes() {
     .delete('/projects/:id/rehearsals/:rid', validate('param', ProjectRehearsalParam), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
+      const project = ownProject(ctx, id, 'edit');
       await engineCall(() => ctx.rehearsals.remove(id, rid));
+      ctx.audit(project, 'rehearsal.deleted', rid);
       return c.json({ ok: true });
     })
     .post('/projects/:id/rehearsals/:rid/interview', validate('param', ProjectRehearsalParam), validate('json', InterviewInput), async (c) => {
       const ctx = c.var.ctx;
       const { id, rid } = c.req.valid('param');
-      ownProject(ctx, id);
+      requireFeature(ctx.planOf(ownProject(ctx, id, 'edit')), 'interviews');
       return c.json({ interview: await engineCall(() => ctx.rehearsals.interview(id, rid, c.req.valid('json'))) });
     });
 }

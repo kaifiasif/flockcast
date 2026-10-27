@@ -54,9 +54,17 @@ def validate_personas(o, n: int) -> list:
     return out
 
 
+# a model writes about 25 detailed people per answer before it runs out of room
+BATCH = 25
+
+
 def generate_personas(llm, audience, examples, handle, platform, count, rng) -> list:
     if not llm:
         return offline_personas(audience, count, rng)
+    if count > BATCH:
+        crowd = generate_personas(llm, audience, examples, handle, platform, BATCH, rng)
+        crowd += generate_personas(llm, audience, examples, handle, platform, count - BATCH, rng)
+        return [{**p, "id": i + 1} for i, p in enumerate(crowd)]
     sample = "\n".join("- " + re.sub(r"\s+", " ", a["text"])[:240] for a in examples[:EXAMPLES_SHOWN]) or "- (no past posts given)"
     return llm.json(
         system="You design realistic, varied social media users for an audience simulation. Reply with JSON only.",
@@ -126,3 +134,32 @@ def tough_crowd(personas, count):
         if p["stance"] == "neutral":
             p["stance"] = "skeptical"
     return crowd
+
+
+def cast_of(cast, limit=50):
+    """A crowd handed back from an earlier rehearsal, so drafts can be compared on the same people.
+    Checked field by field, since it round-trips through the caller."""
+    if not isinstance(cast, list) or not 2 <= len(cast) <= limit:
+        raise ValueError(f"cast must list 2 to {limit} people")
+    out = []
+    for i, p in enumerate(cast):
+        if not isinstance(p, dict) or not trimmed(p.get("name"), 60):
+            raise ValueError(f"cast[{i}] needs a name")
+        out.append({
+            "id": i + 1,
+            "name": trimmed(p.get("name"), 60),
+            "segment": trimmed(p.get("segment"), 60) or "Reader",
+            "bio": trimmed(p.get("bio"), 300),
+            "interests": [trimmed(x, 40) for x in (p.get("interests") or [])[:6] if isinstance(x, str)],
+            "stance": p.get("stance") if p.get("stance") in STANCES else "neutral",
+            "activity": _activity(p.get("activity")),
+            "follows_author": p.get("follows_author") is not False,
+        })
+    return out
+
+
+def _activity(v):
+    try:
+        return min(1.0, max(0.05, float(v)))
+    except (TypeError, ValueError):
+        return 0.5

@@ -29,7 +29,8 @@ export const RehearsalInput = z.object({
   subject: z.string().trim().min(1).max(200).optional(),
   audience: z.string().trim().max(2000).optional(),
   platform: z.enum(PLATFORM_IDS).optional(),
-  personas: z.number().int().min(2).max(30).optional(),
+  /** Up to 50 on Enterprise; other plans cap lower. */
+  personas: z.number().int().min(2).max(50).optional(),
   rounds: z.number().int().min(1).max(40).optional(),
   /** Seat a harsh critic in the crowd (default on). */
   critic: z.boolean().optional(),
@@ -47,7 +48,7 @@ export const CompareInput = z.object({
   drafts: z.array(Draft).min(2, 'Compare at least two drafts.').max(3, 'Compare up to three drafts.'),
   audience: z.string().trim().max(2000).optional(),
   platform: z.enum(PLATFORM_IDS).optional(),
-  personas: z.number().int().min(2).max(30).optional(),
+  personas: z.number().int().min(2).max(50).optional(),
   rounds: z.number().int().min(1).max(40).optional(),
   critic: z.boolean().optional(),
 });

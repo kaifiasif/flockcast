@@ -15,6 +15,7 @@ import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 import { useAppConfig, useProject } from '@/features/projects/api';
 import { BackTo } from '@/features/projects/project-page';
+import { useUsage } from '@/features/team/api';
 import { useStartComparison } from './api';
 
 const LETTERS = ['A', 'B', 'C'];
@@ -24,6 +25,7 @@ function CompareForm({ project }: { project: Project }) {
   const start = useStartComparison(project.id);
   const [drafts, setDrafts] = useState(['', '']);
   const [personas, setPersonas] = useState(project.personas);
+  const crowdCap = useUsage(project.id).data?.plan.limits.maxPersonas ?? 30;
   const [rounds, setRounds] = useState(project.rounds);
   const [critic, setCritic] = useState(true);
   const max = config.data?.limits.maxTextChars ?? 10_000;
@@ -78,7 +80,8 @@ function CompareForm({ project }: { project: Project }) {
           <div className="grid gap-5 sm:grid-cols-2">
             <Field>
               <FieldLabel htmlFor="personas">Followers</FieldLabel>
-              <Input id="personas" type="number" min={2} max={30} value={personas} onChange={(e) => setPersonas(Number(e.target.value))} />
+              <Input id="personas" type="number" min={2} max={crowdCap} value={personas} onChange={(e) => setPersonas(Number(e.target.value))} />
+              {crowdCap > 30 && <FieldDescription>Up to {crowdCap} on this plan.</FieldDescription>}
             </Field>
             <Field>
               <FieldLabel htmlFor="rounds">Rounds</FieldLabel>

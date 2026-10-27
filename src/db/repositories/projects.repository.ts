@@ -1,9 +1,15 @@
+import type { BrandRules } from '../../../engine/index.ts';
 import type { Database } from '../client.ts';
 
 export interface Example {
   text: string;
   published_at?: string | null;
 }
+
+/** Who you are on a project. The owner made it; the rest were invited. */
+export const ROLES = ['owner', 'editor', 'reviewer', 'viewer'] as const;
+export type Role = (typeof ROLES)[number];
+export type MemberRole = Exclude<Role, 'owner'>;
 
 export interface Project {
   id: string;
@@ -17,36 +23,52 @@ export interface Project {
   rounds: number;
   created_at: string;
   updated_at: string;
+  /** The signed-in user's role here. */
+  role: Role;
+  /** The owner's plan id; a project's features follow it. */
+  owner_plan: string;
+  /** Brand rules every rehearsal is checked against, or null. */
+  brand: BrandRules | null;
 }
 
-interface Row extends Omit<Project, 'examples'> {
+interface Row extends Omit<Project, 'examples' | 'brand'> {
   examples_json: string;
+  brand_json: string | null;
 }
 
-export type ProjectFields = Omit<Project, 'id' | 'created_at' | 'updated_at'>;
+export type ProjectFields = Omit<Project, 'id' | 'created_at' | 'updated_at' | 'role' | 'owner_plan' | 'brand'>;
 
-const COLUMNS = 'id, name, description, platform, handle, audience, examples_json, personas, rounds, created_at, updated_at';
-const fromRow = ({ examples_json, ...r }: Row): Project => ({ ...r, examples: JSON.parse(examples_json) as Example[] });
+const COLUMNS = 'id, name, description, platform, handle, audience, examples_json, personas, rounds, created_at, updated_at, brand_json';
+const fromRow = ({ examples_json, brand_json, ...r }: Row): Project => ({ ...r, examples: JSON.parse(examples_json) as Example[], brand: brand_json ? (JSON.parse(brand_json) as BrandRules) : null });
+
+// a project the user owns, or one they were added to; nothing else matches
+const VISIBLE = `FROM projects p JOIN users o ON o.id = p.user_id LEFT JOIN project_members m ON m.project_id = p.id AND m.user_id = ?
+  WHERE (p.user_id = ? OR m.user_id IS NOT NULL)`;
+const SELECT = `SELECT ${COLUMNS.split(', ').map((c) => `p.${c}`).join(', ')}, CASE WHEN p.user_id = ? THEN 'owner' ELSE m.role END AS role, o.plan AS owner_plan`;
 
 /**
- * One user's projects. Built per signed-in user, so every query filters by that owner: someone
- * else's project id reads as not found.
+ * One user's projects: the ones they own and the ones they were invited to, each with their role.
+ * Built per signed-in user, so every query filters by that user: anyone else's project id reads as
+ * not found. Changing or deleting a project is for its owner only.
  */
 export function createProjectsRepository(db: Database, userId: string) {
   return {
     list(): (Project & { rehearsal_count: number; last_rehearsal_at: string | null })[] {
       return db
         .all<Row & { rehearsal_count: number; last_rehearsal_at: string | null }>(
-          `SELECT ${COLUMNS.split(', ').map((c) => `p.${c}`).join(', ')}, COUNT(r.id) AS rehearsal_count, MAX(r.created_at) AS last_rehearsal_at
-           FROM projects p LEFT JOIN rehearsals r ON r.scope = p.id
-           WHERE p.user_id = ? GROUP BY p.id ORDER BY p.created_at DESC`,
-          userId,
+          `${SELECT}, (SELECT COUNT(*) FROM rehearsals r WHERE r.scope = p.id) AS rehearsal_count, (SELECT MAX(created_at) FROM rehearsals r WHERE r.scope = p.id) AS last_rehearsal_at
+           ${VISIBLE} ORDER BY p.created_at DESC`,
+          userId, userId, userId,
         )
         .map((r) => ({ ...fromRow(r), rehearsal_count: r.rehearsal_count, last_rehearsal_at: r.last_rehearsal_at }));
     },
     find(id: string): Project | undefined {
-      const r = db.get<Row>(`SELECT ${COLUMNS} FROM projects WHERE id = ? AND user_id = ?`, id, userId);
+      const r = db.get<Row>(`${SELECT} ${VISIBLE} AND p.id = ?`, userId, userId, userId, id);
       return r ? fromRow(r) : undefined;
+    },
+    /** Projects this user owns, for the plan's project cap. */
+    ownedCount(): number {
+      return db.get<{ n: number }>('SELECT COUNT(*) AS n FROM projects WHERE user_id = ?', userId)?.n ?? 0;
     },
     create(p: ProjectFields & { id: string; at: string }): void {
       db.run(
@@ -60,6 +82,9 @@ export function createProjectsRepository(db: Database, userId: string) {
         p.name, p.description, p.platform, p.handle, p.audience, JSON.stringify(p.examples), p.personas, p.rounds, at, id, userId,
       );
       return changes === 1;
+    },
+    setBrand(id: string, brand: BrandRules | null, at: string): boolean {
+      return db.run('UPDATE projects SET brand_json = ?, updated_at = ? WHERE id = ? AND user_id = ?', brand ? JSON.stringify(brand) : null, at, id, userId).changes === 1;
     },
     remove(id: string): boolean {
       return db.run('DELETE FROM projects WHERE id = ? AND user_id = ?', id, userId).changes === 1;

@@ -32,6 +32,30 @@ export interface RehearsalSettings {
   critic: boolean;
   /** 'crowd' runs the full feed simulation; 'quick' is one model call for a fast first read. */
   mode: RehearsalMode;
+  /** The project's brand rules; when set, Ivy checks the draft against them. */
+  brand?: BrandRules | null;
+}
+
+/** What a brand never says, always says, and sounds like. */
+export interface BrandRules {
+  voice: string;
+  banned: string[];
+  required: string[];
+  notes: string;
+}
+
+export interface BrandIssue {
+  rule: string;
+  level: 'risk' | 'warn';
+  detail: string;
+  excerpt: string | null;
+}
+
+export interface BrandCheck {
+  ok: boolean;
+  issues: BrandIssue[];
+  /** Null when there is no voice rule or no model to judge it. */
+  voice: { fits: boolean; why: string } | null;
 }
 
 export const REHEARSAL_MODES = ['crowd', 'quick'] as const;
@@ -93,7 +117,9 @@ export interface RehearsalResult {
   ai_check?: { method: 'rules' | 'model'; score: number; flags: { index: number; sentence: string; why: string; by: 'rules' | 'model' }[] };
   fixes?: Fix[];
   reply_prep?: ReplyPrep[];
-  studio_errors?: string[];
+  brand?: BrandCheck | null;
+  /** Studio steps that failed, by step, while the rest of the result stands. */
+  studio_errors?: Record<string, string>;
 }
 
 /** A platform rule the post breaks or brushes against. */

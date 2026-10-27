@@ -1,7 +1,7 @@
 """
 Runs one job for the Node server and exits:
 
-    python3 -m flockcast_agents rehearse|interview|advise|summarize  < payload.json
+    python3 -m flockcast_agents rehearse|interview|advise|study|summarize  < payload.json
 
 The payload comes in on stdin as JSON. Progress and the answer go out on stdout as JSON lines:
 {"type":"stage","status":"running","progress":40}, then one {"type":"result",...} or
@@ -14,10 +14,11 @@ import sys
 from .advisor.pipeline import run_advice
 from .advisor.search import adapters
 from .llm import Llm, LlmError
+from .research.study import run_study
 from .summarize import summarize
 from .swarm.engine import JobError, interview, rehearse
 
-JOBS = ("rehearse", "interview", "advise", "summarize")
+JOBS = ("rehearse", "interview", "advise", "study", "summarize")
 
 
 def emit(obj):
@@ -32,6 +33,8 @@ def run(job, payload, env):
         return rehearse(llm, payload, on_stage)
     if job == "interview":
         return interview(llm, payload)
+    if job == "study":
+        return {"result": run_study(llm, payload, on_stage)}
     if job == "summarize":
         # for the MiroFish backend, whose feed has the same shape as the crowd's
         return {"summary": summarize(payload["draft"], payload.get("sentences"), payload.get("posts") or [], payload.get("actions") or [], payload.get("rounds"))}
